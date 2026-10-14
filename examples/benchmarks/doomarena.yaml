@@ -1,0 +1,15 @@
+benchmark: doomarena
+task_ids: [browsergym/webarena.0]
+environment_factory: examples.benchmarks.doomarena_gateway:create_gateway
+agent:
+  kind: http
+  endpoint: http://127.0.0.1:9001
+options:
+  # Supply your Python factory constructing native AttackConfig objects.
+  attack_config_factory: your_attack_setup:attack_configs
+  headless: true
+  abort_on_detection: false
+  abort_on_successful_attack: true
+mode: unguarded
+seed: 42
+max_steps: 100

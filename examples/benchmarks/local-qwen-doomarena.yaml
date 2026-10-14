@@ -1,0 +1,18 @@
+benchmark: doomarena
+task_ids:
+- browsergym/miniwob.click-button
+agent:
+  kind: python
+  factory: examples.benchmarks.ollama_agent:create_agent
+  model: qwen2.5:3b
+  endpoint: http://127.0.0.1:11434
+  options:
+    num_ctx: 16384
+options:
+  attack: false
+mode: unguarded
+max_steps: 12
+episode_timeout: 600
+step_timeout: 180
+environment_factory: examples.benchmarks.doomarena_miniwob:create_gateway
+runtime: installed

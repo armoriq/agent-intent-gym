@@ -1,0 +1,18 @@
+benchmark: stwebagentbench
+task_ids:
+- '47'
+agent:
+  kind: python
+  factory: examples.benchmarks.ollama_agent:create_agent
+  model: qwen2.5:3b
+  endpoint: http://127.0.0.1:11434
+  options:
+    num_ctx: 16384
+options:
+  env_kwargs:
+    headless: true
+mode: unguarded
+max_steps: 24
+episode_timeout: 600
+step_timeout: 180
+runtime: installed

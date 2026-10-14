@@ -1,0 +1,32 @@
+conditions:
+- unguarded
+- armoriq-monitor
+- armoriq-enforce
+tracks:
+- name: agentdojo
+  kind: native
+  config: agentdojo.yaml
+- name: agentdojo-attack
+  kind: native
+  config: agentdojo-attack.yaml
+- name: stwebagentbench
+  kind: native
+  config: stwebagentbench.yaml
+- name: doomarena
+  kind: native
+  config: doomarena.yaml
+- name: doomarena-attack
+  kind: native
+  config: doomarena-attack.yaml
+- name: smoke
+  kind: gym
+  config: intent-gym.yaml
+  suite: smoke
+- name: core
+  kind: gym
+  config: intent-gym.yaml
+  suite: core
+- name: research-factors
+  kind: gym
+  config: intent-gym.yaml
+  suite: research-factors

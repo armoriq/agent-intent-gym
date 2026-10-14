@@ -1,0 +1,25 @@
+agent:
+  kind: openai
+  endpoint: http://127.0.0.1:11434/v1
+  endpoint_env: MODEL_COMPATIBLE_BASE_URL
+  model: qwen2.5:3b
+  model_env: MODEL_NAME
+  api_key_env: MODEL_API_KEY
+  options:
+    temperature: 0
+    api_key_optional: true
+    send_seed: true
+guard:
+  kind: armoriq
+  api_key_env: ARMORIQ_API_KEY
+  options:
+    mcp_name: intentbench
+    timeout: 15
+    validity_seconds: 600
+instrumentation: inside
+mode: enforce
+intent_visibility: request_only
+concurrency: 1
+max_steps: 24
+step_timeout: 180
+episode_timeout: 600

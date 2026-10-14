@@ -1,0 +1,12 @@
+benchmark: stwebagentbench
+task_ids: ['0']
+agent:
+  kind: http
+  endpoint: http://127.0.0.1:9001
+options:
+  env_kwargs:
+    headless: true
+mode: unguarded
+seed: 42
+max_steps: 100
+# Install the upstream BrowserGym package and start the benchmark's websites first.

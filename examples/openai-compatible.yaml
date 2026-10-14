@@ -1,0 +1,12 @@
+agent:
+  kind: openai
+  endpoint: http://127.0.0.1:8000/v1
+  model: your-model-id
+  # api_key_env: YOUR_MODEL_API_KEY
+  options:
+    temperature: 0
+guard:
+  kind: reference
+mode: enforce
+intent_visibility: request_only
+concurrency: 2

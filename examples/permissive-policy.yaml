@@ -1,0 +1,7 @@
+id: permissive-experiment
+objective: Permit all available task tools for a policy ablation
+rules:
+  - id: allow.everything
+    kind: allow_tools
+    description: Permissive baseline with no parameter or approval constraints
+    allowed: ['*']

@@ -1,0 +1,9 @@
+agent:
+  kind: http
+  endpoint: http://127.0.0.1:9001/act
+  # api_key_env: MY_AGENT_API_KEY
+guard:
+  kind: reference
+mode: enforce
+concurrency: 2
+intent_visibility: request_only

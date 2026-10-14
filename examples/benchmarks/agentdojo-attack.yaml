@@ -1,0 +1,13 @@
+benchmark: agentdojo
+task_ids: [user_task_0]
+agent:
+  kind: http
+  endpoint: http://127.0.0.1:9001
+options:
+  suite: workspace
+  benchmark_version: v1.2.2
+  injection_task_id: injection_task_0
+  attack_factory: examples.benchmarks.agentdojo_attack:create_attack
+mode: unguarded
+seed: 42
+max_steps: 100

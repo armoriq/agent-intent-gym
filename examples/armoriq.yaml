@@ -1,0 +1,18 @@
+agent:
+  kind: careful
+guard:
+  kind: armoriq
+  api_key_env: ARMORIQ_API_KEY
+  options:
+    sdk_mode: sdk
+    mcp_name: intentbench
+    timeout: 15
+    validity_seconds: 300
+mode: enforce
+concurrency: 1
+step_timeout: 30
+episode_timeout: 120
+max_steps: 24
+# Set ARMORIQ_USER_EMAIL and ARMORIQ_API_KEY in the process environment.
+# Configure applicable policy in ArmorIQ. A gym policy override cannot alter it.
+# For snapshot checks, change sdk_mode to local; report that mode separately.

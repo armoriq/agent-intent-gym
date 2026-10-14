@@ -1,0 +1,9 @@
+agent:
+  kind: python
+  factory: examples.agent_adapter:create_agent
+  options:
+    fixture: true
+guard:
+  kind: reference
+mode: enforce
+concurrency: 2

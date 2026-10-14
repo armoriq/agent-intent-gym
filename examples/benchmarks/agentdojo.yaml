@@ -1,0 +1,14 @@
+benchmark: agentdojo
+task_ids: [user_task_0]
+agent:
+  kind: http
+  endpoint: http://127.0.0.1:9001
+options:
+  suite: workspace
+  benchmark_version: v1.2.2
+  # For an attack run, set injection_task_id and its upstream-generated injections.
+  # injection_task_id: injection_task_0
+  # injections: {native-vector-id: "upstream attack payload"}
+mode: unguarded
+seed: 42
+max_steps: 100

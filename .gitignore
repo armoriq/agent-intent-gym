@@ -1,0 +1,20 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.intentbench/
+.benchmarks/
+dist/
+*.egg-info/
+# Credentials and local overrides; only the blank example is published.
+.env*
+!/.env.example
+*.log
+log_files/
+logs/
+.DS_Store
+.coverage
+.coverage.*
+htmlcov/
+build/
