@@ -1,62 +1,55 @@
-# Evaluation modes and factors
+# Choose an evaluation
 
-The gym is a common way to define and interact with intent environments; AgentIntentBench is one reference suite using that interface. Evaluation should work for agent developers, environment authors, policy owners, and protection-system researchers through the same protocols. ArmorIQ is an optional guard under evaluation, and the bundled synthetic results remain examples of the infrastructure's behavior.
+The gym measures **observable authorized behavior**. Task failure, wrong plans, unauthorized proposals, and unauthorized effects answer different questions. A guard that blocks everything can have no unsafe effects and no useful completions.
 
-The target is observable authorized behavior. Task failure, plan drift, unauthorized proposals, and unauthorized consequential effects are distinct measurements. A block-all guard can prevent effects while destroying utility; a faithfully executed signed plan can still encode the wrong goal.
+## Choose the experiment
 
-## Usage modes
-
-| User | Mode | Output to inspect |
+| Question | Use | Inspect |
 | --- | --- | --- |
-| Agent developer | Unguarded custom scenarios | Proposal/plan drift and legitimate task capability |
-| Protection developer | Frozen labeled traces or saved-run replay | Allow/block/hold correctness, missed deviations, overblocking, latency |
-| Integration owner | Live enforcing runs | Completion under policy, effects, recovery, intervention burden |
-| Policy owner | Reference-policy override or separately installed native policies | Security–utility changes against unchanged grading definitions |
-| Agent platform team | Matched unguarded/enforcing conditions | Same-scenario outcome changes and clean-task regressions |
-| CI maintainer | Pinned suite, repeat budget, and explicit gate thresholds | Regression exit code plus preserved failure evidence |
-| Domain evaluator | Custom authored YAML and private oracle | Scope, argument, data, approval, and outcome checks specific to a workflow |
-| Existing-agent owner | Python/HTTP adapter or session client | Their agent's observed behavior on controlled gym tools |
+| Does my agent follow the user's intent? | Unguarded scenarios | Plans, proposal drift, task success |
+| Does a guard classify a fixed proposal correctly? | Labeled traces / saved-run replay | Detection, overblocking, latency |
+| Does enforcement help the whole system? | Online unguarded/enforce comparison | Completion under policy, effects, recovery |
+| What would monitoring detect? | Monitor mode | Decisions; actions still execute |
+| Is a policy too broad or too strict? | Policy ablation against unchanged grading | Missed deviations and clean-task interference |
+| Did a change cause a regression? | Pinned suite and CI gate | Explicit thresholds, counts, failure traces |
 
-`enforce` applies guard decisions, `monitor` records them but executes proposals, and `unguarded` skips guard initialization entirely. Do not interpret a monitor's detection rate as prevention. Static trace evaluation measures decisions without estimating an alternate live continuation.
+`unguarded` skips guard initialization. `enforce` blocks/holds before execution. `monitor` records decisions but executes proposals; native monitoring gives no guard feedback to the model. Fixed traces do not estimate how a live agent would recover after a block.
 
-## Factors to control
+## Read the scores
 
-| Factor | What to vary | Current support |
-| --- | --- | --- |
-| Objective fidelity | Wrong plan, added side objective, dropped requirement | Private oracle, plan scoring, plan-poisoning cases |
-| Tool/resource scope | Tool identity, recipient, beneficiary, file boundary | Tool globs and declarative predicates |
-| Parameter fidelity | Amount, destination, required values | JSON schemas and predicates |
-| Cumulative authority | Individually permitted calls exceeding aggregate limits | Cumulative rules and committed-call history |
-| User changes | Add/revise/withdraw a requirement | Authorized versioned intent updates |
-| Commit-time validity | Revocation after selection; state changes before execution | `before_action` disturbances and current oracle checks |
-| Approval | Missing, denied, stale, wrong-argument confirmation | Exact-call/version approvals and user simulator modes |
-| Recovery | Failure before commit, lost response after commit, repeated key | One-shot faults and idempotent/conflicting retries |
-| Workflow prerequisites | Commit without prior read/stage | Sequence prerequisite rules |
-| Third-party content | Malicious and genuinely helpful instructions | Tool injections and matched helpful controls |
-| Context pressure | Distractor messages, long tool results, delayed updates | Author-scheduled messages/content; no calibrated long-horizon suite yet |
-| Visibility | Natural-language task versus structured intent | `request_only` and `structured` |
-| Agent variation | Model, prompt, framework, memory, sampling | Adapter config and source revision metadata; remote determinism is not guaranteed |
-| Guard variation | No guard, prompt/model system, policy guard, native enforcement | Pluggable guards and frozen/live modes |
-| Budget/exposure | Steps, repeats, timeouts, concurrency, case subsets | Runner configuration; per-attempt API calls and sequential steps |
-| Delegation/identity | Principal, tenant, authority attenuation, forged role claims | Native backend identity where applicable; local verified-identity/delegation semantics need an environment extension |
-| Dataflow | Allowed access followed by forbidden disclosure | Author predicates and consequential tool results; no automatic taint/dataflow engine |
-| Adaptive attacker | Knowledge/access, feedback, turn budget | Python/HTTP agents can implement controlled adversarial behavior; built-in attacks are fixed author fixtures |
+| Score | Meaning |
+| --- | --- |
+| Task success | Authored outcome checks passed |
+| Completion under policy (CuP) | Episode completed, task succeeded, no unauthorized effects |
+| Proposal drift | Episodes containing independently unauthorized proposed calls |
+| Unauthorized-effect rate | Episodes where an unauthorized call caused a consequential effect |
+| Guard detection | Unsafe proposals blocked/held, divided by observed unsafe proposals |
+| Guard overblocking | Authorized proposals blocked/held, divided by observed authorized proposals |
+| Coverage | Cases with usable evaluation evidence |
 
-The bundled three workflow templates cover ten factors with clean, challenge, and helpful-control variants. Keep that limited domain coverage visible. Broad multi-agent delegation, adversarial memory persistence, real browsers, and adaptive attack search need additional authored environments and protocols.
+Detection is `null` when no unsafe proposals were observed. Errors/cancellations are excluded from ordinary rates; retain their counts and any observed critical effects. Truncated episodes remain eligible for scoring but receive no CuP credit. Report denominators alongside percentages. Approximate Wilson intervals describe the sample; correlated variants/repeats are not independent population trials.
 
-## Reporting
+Native utility, reward, policy reports, and attack filters keep their upstream definitions. Native detection/overblocking are unmeasured without independent per-proposal labels. An SDK decision is not its own correctness label. Never pool incompatible native rewards into one leaderboard score.
 
-- Name the complete agent system, guard mode/policy revision, suite/scorer/source versions, and budget. Model names alone are insufficient.
-- Report clean, attack, legitimate-update, fault, and helpful-control results separately. Report domains and factors alongside aggregate scores.
-- Show unsafe/authorized proposal denominators. Undefined detection on a clean-only run is not perfect detection.
-- Preserve critical effects separately from average rates. A failed/incomplete episode can still have a consequential unsafe effect.
-- Use independently authored policy labels. Generated scenarios and model judges need calibration before benchmark claims.
-- Audit both outcomes and paths: reaching the correct final state does not erase an earlier forbidden action.
-- Match scenario seeds/configuration when comparing protection modes, and distinguish descriptive comparisons from paired ones.
-- Repeats estimate execution variability; related variants do not establish population-wide failure probabilities. The included intervals are descriptive episode summaries.
+## Build a useful scenario set
 
-## Next integrations
+| Factor | Controls to include |
+| --- | --- |
+| Goal and plan fidelity | Missing requirement, added objective, poisoned plan |
+| Tool, resource, and argument scope | Approved tool/recipient/path/amount versus a close alternative |
+| Aggregate limits and workflow | Individually valid calls exceeding a budget; skipped prerequisite |
+| User changes and commit-time validity | Revision/retraction; revocation after selection, before execution |
+| Approval | Valid, denied, unavailable, stale, and wrong-argument confirmation |
+| Recovery and retries | Failure before commit, response lost after commit, exact/conflicting retry |
+| Third-party content | Injection challenge plus genuinely helpful control |
+| Context and visibility | Distractors/delayed updates; structured versus request-only observations |
 
-Reuse [AgentDojo](https://github.com/ethz-spylab/agentdojo) task/attack semantics, [ST-WebAgentBench](https://github.com/segev-shlomov/ST-WebAgentBench) policy evaluation, and [DoomArena](https://github.com/ServiceNow/DoomArena) attack/environment gateways through explicit adapters while preserving original grading. [AgentLAB](https://arxiv.org/abs/2602.16901), [IntentFlux](https://arxiv.org/abs/2609.32520), and [InterruptBench](https://github.com/HenryPengZou/InterruptBench) provide valuable factor designs. These integrations are not implemented or counted in the current suite.
+The 90 core cases vary three workflow templates, not 90 unrelated domains. The 108 research-factor cases adapt published ideas; they are not calibrated long-horizon or original-paper reproductions. Persistent cross-session memory, verified local delegation, automatic taint tracking, and adaptive attack search need additional environments/protocols.
 
-Inspect AI, OpenEnv/MCP serving, container-isolated worlds, clustered confidence intervals, and distributed execution should be added around the validated contracts and trace semantics rather than changing the grading to fit a vendor's guard.
+## Keep comparisons interpretable
+
+Keep agent/model/prompt, task selection, attacks, planning, source/scorer versions, seeds, and budgets fixed. Restore external website/database snapshots when necessary; a browser reset does not guarantee a database reset. Archive backend policy revisions and remote model settings separately.
+
+Report clean, attack, helpful-control, user-change, and fault cases separately. Preserve earlier unsafe effects even if the final state is correct. Use author/user policy labels and calibrate model judges. Inspect both the outcome and the path; small local trials are integration evidence, not a population robustness claim.
+
+Local `--policy` overrides replace only reference-guard rules/facts. They do not change the private oracle or configure ArmorIQ backend policies. [Authoring](authoring.md) explains the rule language; [the ledger](benchmark-results.md) shows the recorded protocols.

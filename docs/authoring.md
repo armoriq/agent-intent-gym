@@ -1,29 +1,47 @@
-# Scenario and policy authoring
+# Create a scenario
 
-Start with `uv run intentbench new my-evaluation`. Generated JSON schemas can be used in an editor. A scenario or suite is data; YAML is loaded with `safe_load`, and the expression language never evaluates Python or shell text.
+Start from a valid runnable example, then change the task, authorization, tools, and outcome checks together.
 
-## Required scenario fields
+```sh
+uv run intentbench new my-evaluation
+# Edit scenario.yaml, policy.yaml, and run.yaml.
+uv run intentbench validate my-evaluation/scenario.yaml
+uv run intentbench run --suite my-evaluation/scenario.yaml --config my-evaluation/run.yaml
+```
 
-`id`, `name`, `domain`, `description`, `request`, `intent`, `tools`, and nonempty `success` predicates. Version defaults to `1.0.0`; schema version is `1.0`. IDs within a suite and rule/tool IDs within a scenario must be unique.
+YAML uses `safe_load`; expressions do not execute Python or shell code. Generated JSON schemas help validate edits. Python factories remain trusted code.
 
-The user request should state the intended task and constraints in natural language, especially for `request_only` runs. The contract has an objective, monotonically increasing version, facts, rules, and revocation status. An optional `oracle_intent` represents author-owned ground truth when testing a mistaken public capture. It is never an agent or guard input.
+## Define the task and its boundaries
 
-## Rule types
+| Field | What to put there |
+| --- | --- |
+| `id`, `name`, `domain`, `description` | Stable identity and purpose; IDs must be unique within a suite |
+| `request` | Natural-language task and constraints, especially for request-only agents |
+| `intent` | ID, objective, version, facts, rules, and optional revocation |
+| `tools` | Names, JSON argument schemas, responses, preconditions, effects |
+| `initial_state` | Private starting state |
+| `public_state_keys` | Top-level state fields deliberately visible to agents/guards |
+| `success` | Nonempty list of independent outcome predicates |
+| `disturbances` | Optional scheduled injections, updates, faults, or messages |
 
-| Kind | Fields | Interpretation |
+Required fields are `id`, `name`, `domain`, `description`, `request`, `intent`, `tools`, and `success`. Schema version is `1.0`; scenario version defaults to `1.0.0`. Rule/tool IDs must be unique. Change versions when meaning changes.
+
+An optional `oracle_intent` tests a mistaken public capture against private author-owned ground truth. It is never sent to the agent or guard. Expose the public facts a guard needs, or expect interference when it cannot validate a call.
+
+## Write authorization rules
+
+Rules are conjunctive; each has an ID, description, optional applicable `tools` patterns, and severity (`low`, `medium`, `high`, `critical`). Revocation and explicit stale intent versions are always checked.
+
+| Kind | Key fields | Meaning |
 | --- | --- | --- |
-| `allow_tools` | `allowed` glob patterns | Tool scope; an empty list permits none |
-| `predicate` | `predicate.left`, `op`, `right` | Argument, state, data, or resource constraint |
-| `cumulative` | `field`, `limit` | Nonnegative quantities accumulated across executed matching calls; exact idempotent retries contribute zero |
-| `sequence` | `requires` tool patterns | Each prerequisite must have executed earlier; this is not a full temporal-logic automaton |
-| `approval` | tool scope | One exact call requires user approval bound to its arguments and active intent version |
-
-Every rule has `id`, `description`, optional `tools` applicability patterns, and severity (`low`, `medium`, `high`, `critical`). Rules are conjunctive. Revocation and explicit stale versions are always checked. Organization/user precedence is represented by the author-resolved effective contract; this release does not automatically resolve competing policy documents or prove asserted identities.
-
-Example:
+| `allow_tools` | `allowed` globs | Permitted tools; empty permits none |
+| `predicate` | `left`, `op`, `right` under `predicate` | Argument/resource/state constraint |
+| `cumulative` | `field`, `limit` | Nonnegative quantities across executed matching calls |
+| `sequence` | `requires` patterns | Prerequisites that must have executed earlier |
+| `approval` | Applicable tool scope | Approval for the exact arguments and active version |
 
 ```yaml
-- id: beneficiary
+- id: approved-beneficiary
   kind: predicate
   description: Preserve the approved beneficiary
   tools: [payments__commit]
@@ -34,18 +52,13 @@ Example:
     right: {ref: intent.facts.target}
 ```
 
-## Expressions
+References use `args.*`, `state.*`, `intent.facts.*`, and `history.*` where available. `{"len": {"ref": "state.outputs"}}` computes length; dictionaries/lists resolve recursively. Operators: `eq`, `ne`, `lt`, `lte`, `gt`, `gte`, `in`, `not_in`, `contains`, `not_contains`, `starts_with`, `within_path`, `matches`, `subset`, `exists`, `truthy`.
 
-- `{"ref": "args.amount"}` looks up arguments; `state.*`, `intent.facts.*`, and `history.*` are also available where appropriate.
-- `{"len": {"ref": "state.outputs"}}` computes a collection/string length.
-- Dictionaries/lists otherwise resolve recursively. This allows structured results and effects to refer to arguments or state.
-- Operators: `eq`, `ne`, `lt`, `lte`, `gt`, `gte`, `in`, `not_in`, `contains`, `not_contains`, `starts_with`, `within_path`, `matches`, `subset`, `exists`, `truthy`.
-- `eq` distinguishes booleans from numbers. Numeric range rules reject booleans/non-finite values. Missing values resolve to null; tool schemas should make important arguments required.
-- Use `within_path` for POSIX resource scope rather than a raw prefix. It normalizes `..` and checks segment boundaries. It does not resolve real filesystem symlinks. Regexes and the declarative specifications are trusted author inputs.
+Missing fields resolve to null, so require important arguments in tool schemas. Equality distinguishes booleans from numbers; numeric ranges reject booleans/non-finite values. Use `within_path` for normalized POSIX path segments, not raw string prefixes; it does not resolve real symlinks. Use integer minor units for budget amounts. The world is a generic JSON simulator, not an accounting engine or policy-document precedence resolver.
 
-## Simulated tools
+## Define effects and retries
 
-Each tool has a JSON Schema `parameters` object and an optional response, preconditions, and effects. Available effects are `set`, `append`, `increment`, and `delete`. Paths are arrays, allowing a dynamic key without interpreting dots or slashes:
+Effects are `set`, `append`, `increment`, or `delete`; paths are arrays with optional dynamic references:
 
 ```yaml
 effects:
@@ -54,32 +67,24 @@ effects:
     value: {ref: args.content}
 ```
 
-`side_effect: true` (default) marks execution as consequential, including a sensitive disclosure even with no state mutation. Use `false` only for non-consequential fixture reads/staging. These choices affect effect scoring; proposal conformance is still scored for every tool call.
+`side_effect: true` is the default and includes consequential disclosures even without state mutation. Use `false` for genuinely non-consequential reads/staging; this choice changes effect scoring, not proposal conformance.
 
-Set `idempotency_field` to a required string argument for a tool with retry-safe semantics. Repeated exact arguments under that key deduplicate. Different arguments conflict. Leave it unset to model a service without idempotency.
+Set `idempotency_field` to a required string argument for retry-safe tools. Exact retries deduplicate without extra budget/approval consumption; changed arguments under that key conflict. Leave it unset to model non-idempotent services. Schema/precondition failures and non-finite/overflowed state cannot commit effects.
 
-Use integer minor units for money/budget quantities. The generic JSON world uses ordinary numeric arithmetic; it is not a financial accounting engine. Non-finite inputs and overflowed state are rejected before commitment.
+## Schedule challenges and controls
 
-`initial_state` is private environment state. `public_state_keys` explicitly selects top-level state keys visible to the agent and guard; otherwise the state is accessed through tools. Include state facts needed for the policy guard, or accept that a guard lacking those facts can overblock. Outcome checks run against private state and the active oracle intent.
+Each disturbance specifies zero-based proposal `step`, `phase`, `kind`, `source`, and `payload`.
 
-## Disturbances and approval
-
-Disturbances declare `step` (zero-based proposal index), `phase`, `kind`, `source`, and `payload`:
-
-| Kind | Payload |
+| Kind | Payload / behavior |
 | --- | --- |
-| `inject` | `tool` plus untrusted content returned by that tool |
-| `intent_update` | New `facts`, `objective`, `rules`, and/or `revoked`; only source `user` or `organization` |
-| `state_change` | `effects` applied by the environment |
-| `fault` | `tool`, optional `after_commit`, optional `message`; a one-shot simulated failure |
-| `message` | Public message text with explicit provenance |
+| `inject` | `tool` and untrusted content returned by it |
+| `intent_update` | New facts/objective/rules/revocation; source must be `user` or `organization` |
+| `state_change` | Environment effects |
+| `fault` | Tool, optional `after_commit`, message; one-shot failure |
+| `message` | Public text with explicit provenance |
 
-`before_observation` changes what the agent sees. `before_action` applies after selection and before enforcement/execution, for stale-action tests. Updates increment the active public and oracle versions and invalidate approvals. They are scheduled author-owned events; injected text cannot update the contract.
+`before_observation` affects what the agent sees. `before_action` occurs after selection and before checks, supporting stale-selection/revocation tests. Authorized updates increment public/oracle versions and invalidate approvals; injected text cannot revise the contract. Within-episode message poisoning is not persistent cross-session memory.
 
-`ask_user` includes `args.action: {tool, args}`. The fixture user follows the declared contract, not instructions inside a tool response. `approval_behavior` can be `approve_valid`, `deny`, or `unavailable`. Production-human interaction is not implemented; use explicit user events or an external adapter for more realistic approval workflows.
+`ask_user` submits one exact `{tool, args}`. The simulated user follows the declared contract, with `approval_behavior: approve_valid|deny|unavailable`; it does not follow tool injections. This does not implement a production human approval flow.
 
-## Guard-policy experiments
-
-`--policy policy.yaml` takes an Intent-shaped document. Its rules replace the reference guard's policy, and its facts overlay public facts. The active version/revocation still follows the scenario. The private oracle and success checks remain unchanged. It is therefore possible for a permissive policy to allow an independently scored deviation.
-
-Native ArmorIQ policies are backend-owned. The gym rejects local policy overrides for native/HTTP/Python guards to prevent giving misleading results about a policy that was never actually installed.
+For every challenge, add a clean case and a legitimate/helpful control. Keep success grading independent of the guard. Local `--policy policy.yaml` replaces reference-guard rules and overlays facts while leaving the oracle fixed; ArmorIQ/HTTP/Python guard policy is configured externally. [Evaluation design](evaluation-design.md) explains factors and denominators.

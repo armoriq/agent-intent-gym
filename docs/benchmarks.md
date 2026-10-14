@@ -1,136 +1,79 @@
-# Benchmark ecosystem
+# Run native benchmarks
 
-The gym includes three optional native environment adapters and three sources of attributed factor designs. Native environments retain their own task definitions, attacks, execution, and graders. Factor adaptations are newly authored synthetic gym scenarios, scored by our intent oracle. These are different evaluation tracks and are reported separately.
+Native adapters keep upstream tasks, attacks, execution, and graders. The separate `research-factors` suite contains authored adaptations scored by the local intent oracle.
 
-| Source | Integration | Preserved output / local adaptation |
+| Source | Integration | Output / scope |
 | --- | --- | --- |
-| [AgentDojo](https://github.com/ethz-spylab/agentdojo) | Native `TaskSuite` and `FunctionsRuntime` adapter | Original utility and attack-success predicates, including trace-based grading; native injection vectors and optional `BaseAttack` factory |
-| [ST-WebAgentBench](https://github.com/segev-shlomov/ST-WebAgentBench) | Native BrowserGym environment adapter | Unmodified rewards, safety penalties, policy reports, and transition info |
-| [DoomArena](https://github.com/ServiceNow/DoomArena) | Factory for a native attack gateway with Gymnasium-shaped reset/step | Underlying reward, gateway info, original success-filter results, and termination behavior |
-| [AgentLAB](https://arxiv.org/abs/2602.16901) | Five factor adaptations | Intent hijacking, tool chaining, objective drifting, task injection, within-episode memory poisoning |
-| [IntentFlux](https://arxiv.org/abs/2609.32520) | Four factor adaptations | Add an approval requirement, withdraw an operation, replace a target, and benign repeated-message controls |
-| [InterruptBench](https://github.com/HenryPengZou/InterruptBench) | Three factor adaptations | Early clarification, later modification, and pre-commit retraction |
+| [AgentDojo](https://github.com/ethz-spylab/agentdojo) | Native suite and functions runtime | Original utility and attack success |
+| [ST-WebAgentBench](https://github.com/segev-shlomov/ST-WebAgentBench) | Native BrowserGym environment | Reward, safety penalties, every policy report |
+| [DoomArena](https://github.com/ServiceNow/DoomArena) | Native attack gateway factory | Underlying reward and original success filters |
+| [AgentLAB](https://arxiv.org/abs/2602.16901) | Five authored factors; separate original-entrypoint smoke | 45 local cases; native smoke judge is uncalibrated |
+| [IntentFlux](https://arxiv.org/abs/2609.32520) | Four authored factors | 36 local cases; no installable native release located |
+| [InterruptBench](https://github.com/HenryPengZou/InterruptBench) | Three authored factors; native inputs/grader checked | 27 local cases; original WebArena services still needed |
 
-The AgentLAB paper is the **long-horizon attack benchmark**, distinct from ServiceNow's `agentlab` experiment package used by DoomArena.
+The AgentLAB long-horizon paper is distinct from ServiceNow's `agentlab` package used by DoomArena. [Results](benchmark-results.md) and [licenses](../THIRD_PARTY_NOTICES.md) record the evidence and attribution.
 
-## Run the included factor suite
-
-```sh
-uv run intentbench run --suite research-factors --agent careful --guard reference
-uv run intentbench matrix --suite research-factors --agent gullible --guard reference
-uv run intentbench tui --suite research-factors
-```
-
-There are 108 synthetic episodes: 12 factor designs × three workflows × clean/challenge/control. Source and factor tags accompany each scenario. `examples/build_research_factors.py` rebuilds the suite. The browser workbench has a Research factors selector.
-
-These small deterministic fixtures exercise integration and scoring. They do not reproduce the papers' long-horizon tasks, learned/adaptive attack optimizers, persistent cross-session memory, user simulators, interruption replay protocol, or published metrics. Add-goal uses a new approval requirement; delete-goal uses cancellation of the consequential operation. Message controls match scheduled intervention points, not necessarily realized dialogue lengths. They are starting points for factor authoring, not calibrated reproductions of CAR/IDG or official benchmark coverage.
-
-## Run native benchmarks
-
-Install the tested source revisions into separate local environments:
+## Install and choose a recipe
 
 ```sh
-uv run python scripts/install_benchmarks.py
+uv run python scripts/install_benchmarks.py agentdojo stwebagentbench doomarena
+uv run intentbench benchmarks list
 uv run intentbench benchmarks run examples/benchmarks/local-qwen-agentdojo.yaml
 ```
 
-The installer clones into `.benchmarks/sources`, creates `.benchmarks/runtimes`, and records package freezes and an installation manifest. Existing checkouts with a different revision are retained and reported rather than overwritten. AgentLAB uses a CPU API-control profile: its original requirements contain an OpenAI/LiteLLM conflict and CUDA-specific dependencies. InterruptBench uses its legacy runtime plus missing import dependencies. ST's old Chromium crashes on this macOS version, so its tested runtime overrides the upstream Playwright pin with 1.64.0; original task/policy graders remain unchanged. These differences are recorded in the [execution report](benchmark-results.md).
+Omit installer names to install all available profiles. Checkouts live under `.benchmarks/sources`, isolated Python runtimes under `.benchmarks/runtimes`; manifests/freezes record actual installation state. Existing different revisions are retained rather than overwritten. Native configuration `runtime: installed` dispatches CLI/TUI/browser jobs into these runtimes while sharing result history.
 
-Set `runtime: installed` in a native configuration to dispatch CLI, TUI, and browser jobs to the appropriate installed runtime. `.benchmarks/environment-urls.json` supplies configured public service URLs; credentials come from the calling environment. Per-runtime processes keep incompatible BrowserGym versions separate. Artifacts still use the common `.intentbench/benchmarks` history. The local Qwen examples need Ollama running with `qwen2.5:3b` installed; they use real model inference, not fixture actions.
+| Recipe in `examples/benchmarks/` | Requires |
+| --- | --- |
+| `local-qwen-agentdojo.yaml` | Ollama with `qwen2.5:3b`; no browser services |
+| `local-qwen-stwebagentbench.yaml` | Same model plus original ST websites/SuiteCRM |
+| `local-qwen-doomarena.yaml` | Same model plus original MiniWoB pages/browser runtime |
+| `agentdojo.yaml`, `stwebagentbench.yaml`, `doomarena.yaml` | Your native-action HTTP agent, default port 9001 |
 
-Native dependencies stay optional and separate from the offline gym installation. Prepare the upstream environments following their own setup instructions; select a runtime containing the appropriate packages when launching the CLI or server. Configurations in `examples/benchmarks` point to an HTTP agent on port 9001; supply your own service or Python agent.
+The installer does **not** start websites or obtain credentials. Follow each upstream repository's environment setup. `.benchmarks/environment-urls.json` can provide public service URLs (`MINIWOB_URL`, `WA_SUITECRM`, `SUITECRM`, `GITLAB`, `SHOPPING_ADMIN`); credentials stay in the environment. Browser/service version deviations are listed in [the ledger](benchmark-results.md).
 
 ```sh
-uv run intentbench benchmarks list
-uv run intentbench benchmarks inspect agentdojo
-
-# AgentDojo: installed checkout, native tools, and native grading.
-uv run --with-editable /path/to/agentdojo intentbench benchmarks run examples/benchmarks/agentdojo.yaml
-
-# Optional native fixed-template attack generation (repository examples on PYTHONPATH).
-PYTHONPATH=. uv run --with-editable /path/to/agentdojo intentbench benchmarks run examples/benchmarks/agentdojo-attack.yaml
-
-# Native configurations and result inspection in a TUI.
-uv run --with-editable /path/to/agentdojo intentbench benchmarks tui --config examples/benchmarks/agentdojo.yaml
-
+uv run intentbench benchmarks tui --config examples/benchmarks/local-qwen-agentdojo.yaml
 uv run intentbench benchmarks history
 uv run intentbench benchmarks show RUN_ID
 uv run intentbench benchmarks verify RUN_ID
 ```
 
-The browser's **Benchmark ecosystem** view lists all six sources, accepts a native JSON configuration, starts/stops runs, and displays native score and transition artifacts. Start the server with the same upstream dependency options used for the CLI; installing a package in another process does not make it available to an already-running server.
+The browser workbench's Benchmark ecosystem view edits native JSON configurations and displays original grades. [ArmorIQ setup](armoriq-inside.md) adds matched protection conditions.
 
-### AgentDojo
+## Configure each adapter
 
-Options choose the native suite, benchmark version, injection task, and injection mapping. By default the adapter uses `workspace` and `v1.2.2`. Task IDs are explicit. `injections` maps native injection-vector IDs to payload strings. Alternatively, `attack_factory` returns an actual upstream `BaseAttack`; the adapter calls its `attack(user_task, injection_task)` and applies the returned mapping through the original suite loader. The included factory uses the native fixed-template generator and candidate discovery. Adaptive attackers need a factory with a real target pipeline; the gym does not automatically substitute its external agent for that pipeline.
+| Adapter | Configuration and grading contract |
+| --- | --- |
+| AgentDojo | Explicit `task_ids`; `options.suite` and `benchmark_version` default to workspace/v1.2.2. `injection_task_id` plus `injections` or `attack_factory` selects attacks. The factory returns native `BaseAttack`; original candidate loading is preserved. Trace-based utility/security grading takes precedence when available. **`attack_success: true` means the attacker succeeded.** |
+| ST-WebAgentBench | Numeric IDs map to `browsergym/STWebAgentBenchEnv.ID`. `options.env_kwargs` reaches the native environment; policies stay in public observations. Derived completion uses final reward == 1 and no violated native report, and is unknown if reports are absent. Raw grades are retained. |
+| DoomArena | `environment_factory` must return an actual native `AttackGateway` with Gymnasium-shaped reset and five-value step. Configure original attacks/filters through the supplied factory; original abort and success-filter behavior stays intact. Other gateway protocols need their own bridge. |
 
-The adapter initializes the task's environment before taking its pre-execution snapshot. On completion it invokes `utility_from_traces` when available and otherwise `utility`, with the same precedence for `security_from_traces` / `security`. **Upstream `security=True` means the attacker succeeded**; we retain that polarity under the explicit name `attack_success`. Ground-truth actions, attack goals, and graders stay out of the agent observation. Generated injections and the native pre-environment are frozen in artifacts.
+Ground-truth actions, hidden attacker goals, and grader data stay outside the agent channel. Artifacts freeze native setup and AgentDojo injections. Adaptive attacks need a factory with a real target pipeline; the adapter does not invent that pipeline or substitute an unrelated environment.
 
-### ST-WebAgentBench
+## Agent and guard protocol
 
-Install the upstream BrowserGym package and its requirements, expose the repository's top-level `stwebagentbench` package, and start its websites. For the reviewed checkout, a runtime can be launched with:
-
-```sh
-PYTHONPATH=/path/to/ST-WebAgentBench uv run \
-  --with-editable /path/to/ST-WebAgentBench/browsergym/stwebagentbench \
-  --with openai --with nltk --with pandas \
-  intentbench benchmarks run examples/benchmarks/stwebagentbench.yaml
-```
-
-Numeric task IDs map to `browsergym/STWebAgentBenchEnv.ID`; explicit native IDs also work. `options.env_kwargs` passes native environment arguments, including a custom action mapping when supplied through an environment factory. Policies remain in the upstream observation. Rewards, safety penalties, all policy reports, and final info are archived unchanged.
-
-An explicitly labeled derived view mirrors the upstream example loop: final reward equal to 1.0 and no report marked `violated`. It remains unmeasured when no safety report was supplied. This view does not replace the original reward or reports.
-
-### DoomArena
-
-The supplied factory constructs `BrowserGymAttackGateway` around an upstream browser environment. Install DoomArena's core/browser packages and prepare the underlying websites. Configure `options.attack_config_factory` as your Python factory returning original `AttackConfig` objects. `PYTHONPATH` must include your factory and any repository examples you use. Native attack filters, content generators, success filters, defenses, and abort behavior remain owned by the gateway.
-
-The adapter checks that the factory returns an actual `AttackGateway`. It supports gateways with Gymnasium-shaped `(observation, info)` reset and five-value step results, including the BrowserGym gateway. Other native gateway protocols require an explicit bridge; OSWorld/tau-bench/MCP are not automatically normalized. The gym preserves raw gateway info and a per-step history of `success_filter_results`, without inventing a universal attack-success metric.
-
-## Native agent and guard protocols
-
-A Python factory is called with `config=AdapterConfig` and `seed=int`, returning an agent with synchronous or asynchronous `act(envelope)`. An optional `aclose()` releases agent resources. Each episode gets a fresh agent and environment. Synchronous environment operations share an owning thread without an asyncio event loop, while agent/guard calls have their own asynchronous loop. This supports synchronous Playwright and thread affinity. Episodes are serial within each run in this release.
+A native Python factory is called as `create_agent(config=AdapterConfig, seed=int)`. It returns synchronous or asynchronous `act(envelope)` and optional `aclose()`. This differs from the local factory signature in [adapters.md](adapters.md).
 
 ```python
-# The public envelope, not a gym-local scenario observation:
-{
-    "benchmark": "agentdojo",  # or stwebagentbench / doomarena
-    "task_id": "user_task_0",
-    "seed": 123,
-    "step": 0,
-    "observation": {},         # native public observation
-    "guard_feedback": None,    # latest guard decision when a guard is configured
+envelope = {
+    "benchmark": "agentdojo", "task_id": "user_task_0", "seed": 42,
+    "step": 0, "observation": native_public_observation, "guard_feedback": None,
 }
 ```
 
-AgentDojo accepts `{"kind": "tool", "tool": "native_name", "args": {...}}` or `{"kind": "finish", "args": {"output": "final answer"}}`. BrowserGym accepts its native action string. Plan declarations and delegated approval protocols need a custom harness; they are not silently converted into tool calls. An HTTP agent receives `POST /act` with `{"observation": envelope}` and returns `{"action": native_action}`. NumPy observations use an explicit dtype/shape/data encoding over HTTP; bytes use base64. Python agents receive their native types.
+AgentDojo actions are `{kind: tool, tool: native_name, args: ...}` or `{kind: finish, args: {output: answer}}`. Browser actions are native strings such as `click('42')`. An HTTP native agent receives `POST /act` with `{"observation": envelope}` and returns `{"action": native_action}`. NumPy data is encoded with dtype/shape/data; bytes use base64 over HTTP. Python agents keep native types.
 
-Optional `guard` uses the same adapters as the local gym, including ArmorIQ. Enforcing or monitoring runs require an explicit author-owned `contract`. Browser actions additionally require `action_mapper: module:callable`, mapping the exact native proposal to a validated gym `Action`. This is where you define the browser-to-policy tool vocabulary; native benchmark policies remain independent. Public guard context contains that contract and executed mapped-call history, without private grader state.
+Guarded native runs require an author-owned `contract` and guard. Browser guards also require `action_mapper: module:callable` producing a validated gym Action. ArmorIQ needs a declared `guard_plan` or public-observation `plan_factory`; choose `instrumentation: inside` for the SDK wrapper and `guard_responses: true` to check AgentDojo output. [Plan limitations](armoriq-inside.md#what-gets-instrumented) explain interference and scope.
 
-ArmorIQ runs require an explicit author-owned `guard_plan` or `plan_factory` producing a declared plan from public observations. The runner submits it through the SDK's plan-capture interface before checking actions. A plan factory runs identically in unguarded and guarded conditions; there is no automatic authorization of each proposed call. Other guards can optionally use the same plan. Plan decisions are recorded separately from per-action decisions; a denied plan ends enforcement without executing native actions. `instrumentation: inside` composes the agent with its SDK gate, and `guard_responses: true` also checks AgentDojo final answers. See [matched ArmorIQ-inside experiments](armoriq-inside.md) for runnable profiles and plan limitations.
+Enforcement blocks before execution without a replacement noop, which would advance the attack schedule. Native monitor is passive. Reset/step/grade/close share one native thread outside asyncio; episodes are serial within a run. Async calls have budgets; blocking native work stops at cooperative boundaries.
 
-Enforcement blocks/holds before native execution and returns feedback to the agent. It does not execute a replacement noop, which could advance a native attack schedule. Monitor mode records guard decisions and executes the original proposal. Per-action independent guard labels are not available from these integrations, so detection and overblocking remain unmeasured. Native task/attack outcomes can compare guarded and unguarded runs while retaining their definitions.
-
-## Artifacts and validity
-
-Native artifacts live under `.intentbench/benchmarks/RUN_ID/`, separate from local intent-oracle runs. Each run stores configuration, manifest, per-episode checkpoints, native setup, grader/source identities, raw native scores, labeled derived views, decisions, and transitions. The whole result, manifest, and config can be verified against saved hashes. These are integrity checks, not signed attestations.
-
-Manifests record installed distribution versions, adapter/factory source hashes, and source identities of instantiated upstream tasks/graders/gateways. Editable Git checkouts include their actual revision and dirty status. Registry `reviewed_revision` records what informed adapter development; it is **not** a claim that the installed version matches. External service snapshots, model/prompt revisions, attack configuration dependencies, and remote policy revisions remain your responsibility to archive.
-
-Keeping original grading does not make a gym-owned agent loop an official upstream evaluation protocol. Attack budgets, defenses, model prompts, task selection, service reset, retries, and environment caps can affect outcomes. Do not combine native rewards into a cross-benchmark score. Compare runs only when these settings and source revisions match, and retain errors, truncation, and cancellation counts. Blocking native calls and cleanup stop cooperatively at step boundaries; async agent/guard calls have explicit timeouts.
-
-## Verification and attribution
-
-`tests/test_benchmarks.py` checks reward/report preservation, prior violations, guard enforcement, monitor semantics, thread affinity, cancellation, API jobs, artifact tampering, and attribution. `native_contract_smoke.py` exercises actual AgentDojo task tools and grader agreement in all four suites; `gateway_contract_smoke.py` exercises an actual ST policy evaluator and a DoomArena core gateway subclass without websites. These are compatibility checks, not real-agent or browser benchmark scores.
+## Factor suite and checks
 
 ```sh
-PYTHONPATH=. uv run --with-editable /path/to/agentdojo python examples/benchmarks/native_contract_smoke.py
-PYTHONPATH=/path/to/ST-WebAgentBench uv run \
-  --with-editable /path/to/ST-WebAgentBench/browsergym/stwebagentbench \
-  --with openai --with nltk --with pandas \
-  python examples/benchmarks/gateway_contract_smoke.py stwebagentbench
-uv run --with-editable /path/to/DoomArena/doomarena/core \
-  python examples/benchmarks/gateway_contract_smoke.py doomarena
+uv run intentbench matrix --suite research-factors --agent gullible --guard reference
 ```
 
-See [third-party notices](../THIRD_PARTY_NOTICES.md) for sources and license boundaries. No upstream datasets or implementation files are vendored. Optional package licenses remain applicable when those packages are installed.
+These 108 local cases adapt intent hijacking/chaining/drifting/injection/memory poisoning, evolving goals, and clarification/modification/retraction. They do not reproduce long-horizon optimizers, cross-session memory, interruption replay, or original-paper metrics. Source tags and rebuild code accompany the suite.
+
+Contract checks live in `tests/test_benchmarks.py`, `examples/benchmarks/native_contract_smoke.py`, and `gateway_contract_smoke.py`; InterruptBench's string/current-intent check is `interruptbench_contract_smoke.py`. They validate interfaces, not agent capability. Native manifests keep installed revisions/source hashes separate from catalog review revisions; external database snapshots, model revisions, and backend policies need their own archive.
