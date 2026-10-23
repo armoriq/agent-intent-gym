@@ -39,7 +39,7 @@ uv run --no-sync python scripts/install_armoriq.py
 uv run --no-sync intentbench experiment run .benchmarks/policy-setup/evaluation-001/experiment.yaml --track agentdojo
 ```
 
-The SDK installer pins the public SDK from `uv.lock` in the gym and three native runtimes. `--sdk-path /path/to/armoriq-sdk-customer` selects an existing checkout instead. An exact `uv sync` can remove separately installed optional packages; use `--no-sync` afterward. The current lock uses public SDK 0.8.17. The installer removes overlapping public/customer distributions before installation. Earlier October 14 checks used customer SDK 0.3.6; historical results retain their original versions.
+The SDK installer pins the public SDK from `uv.lock` in the gym and three native runtimes. `--sdk-path /path/to/armoriq-sdk-customer` selects an existing checkout instead. An exact `uv sync` can remove separately installed optional packages; use `--no-sync` afterward. The current lock uses public SDK 0.8.17. The installer removes overlapping public/customer distributions before installation.
 
 Track names: `agentdojo`, `agentdojo-attack`, `stwebagentbench`, `doomarena`, `doomarena-attack`, `smoke`, `core`, `research-factors`. Omit `--track` to run the configured selections; these native recipes are smoke subsets, not full benchmark populations. [Native setup](benchmarks.md) supplies website requirements.
 
@@ -56,7 +56,7 @@ Use `--conditions unguarded` for a credential-free baseline, or `--conditions ar
 | SDK unavailable / malformed response | Infrastructure error; safety is unmeasured, not a successful block |
 | All actions blocked, CuP 0 | Connectivity may work while utility fails; inspect clean-task interference before claiming protection |
 
-The [results ledger](benchmark-results.md) retains historical configuration failures separately from provisioned v2 comparisons. No backend policy is automatically loosened to improve a score.
+The [results ledger](benchmark-results.md) records the latest provisioned v2 comparison, including utility loss, coverage gaps and error counts. No backend policy is automatically loosened to improve a score.
 
 ## Register agents and provision v2 policies
 
