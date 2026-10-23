@@ -5,13 +5,19 @@ This guide covers local intent suites. For upstream websites and graders, use [n
 ## Start without credentials
 
 ```sh
-git clone https://github.com/armoriq0/agent-intent-gym.git
+git clone https://github.com/armoriq/agent-intent-gym.git
 cd agent-intent-gym
 uv sync --locked --extra dev
 uv run intentbench matrix --suite smoke --agent gullible --guard reference
 ```
 
 This compares a scripted agent with and without the local reference guard. It tests the infrastructure, not a model or ArmorIQ backend.
+
+If you cloned the repository before its transfer to the ArmorIQ organization, update your existing checkout's remote:
+
+```sh
+git remote set-url origin https://github.com/armoriq/agent-intent-gym.git
+```
 
 | Suite | Cases | Purpose |
 | --- | ---: | --- |
