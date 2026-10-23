@@ -28,9 +28,9 @@ armoriq = [
 intentbench = "agent_intent_bench.cli:app"
 
 [project.urls]
-Repository = "https://github.com/armoriq0/agent-intent-gym"
-Issues = "https://github.com/armoriq0/agent-intent-gym/issues"
-Documentation = "https://github.com/armoriq0/agent-intent-gym/tree/main/docs"
+Repository = "https://github.com/armoriq/agent-intent-gym"
+Issues = "https://github.com/armoriq/agent-intent-gym/issues"
+Documentation = "https://github.com/armoriq/agent-intent-gym/tree/main/docs"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/agent_intent_bench"]

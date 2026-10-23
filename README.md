@@ -1,6 +1,6 @@
 # ArmorIQ Agent Intent Gym
 
-[![CI](https://github.com/armoriq0/agent-intent-gym/actions/workflows/ci.yml/badge.svg)](https://github.com/armoriq0/agent-intent-gym/actions/workflows/ci.yml)
+[![CI](https://github.com/armoriq/agent-intent-gym/actions/workflows/ci.yml/badge.svg)](https://github.com/armoriq/agent-intent-gym/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
 [![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -78,7 +78,7 @@ The earlier, broader model evaluation also remains published. ArmorIQ reduced un
 Use Python 3.11 and [uv](https://docs.astral.sh/uv/). This scripted example needs no model or credentials:
 
 ```sh
-git clone https://github.com/armoriq0/agent-intent-gym.git
+git clone https://github.com/armoriq/agent-intent-gym.git
 cd agent-intent-gym
 uv sync --locked --extra dev
 uv run --no-sync intentbench matrix --suite defense-layers \
