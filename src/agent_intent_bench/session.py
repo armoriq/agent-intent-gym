@@ -138,6 +138,12 @@ class Session:
             "last_result": copy.deepcopy(self.last_result),
             "approvals": sorted(self.approvals),
         }
+        if self.config.stable_observation_ids:
+            # Runtime UUIDs must not perturb otherwise paired model prompts or
+            # reveal scenario labels. Storage/guard IDs remain unique per run.
+            observation["episode_id"] = canonical_hash(
+                {"scenario": self.scenario.id, "seed": self.seed}
+            )[:16]
         if self.config.intent_visibility == "structured":
             observation["intent"] = self.intent.model_dump()
             observation["starter_plan"] = resolve(

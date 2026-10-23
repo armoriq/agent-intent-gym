@@ -25,18 +25,16 @@ def load_suite(name_or_path: str = "core") -> Suite:
     path = Path(name_or_path)
     if path.exists():
         data = read_yaml(path)
-    elif name_or_path == "research-factors":
+    elif name_or_path in {"research-factors", "authorization-boundaries"}:
         return Suite.model_validate(
             yaml.safe_load(
-                files("agent_intent_bench")
-                .joinpath("data/suites/research-factors.yaml")
-                .read_text()
+                files("agent_intent_bench").joinpath(f"data/suites/{name_or_path}.yaml").read_text()
             )
         )
     else:
         if name_or_path not in {"core", "smoke", "email", "payments", "coding"}:
             raise ValueError(
-                f"Unknown suite: {name_or_path}. Use core, smoke, email, payments, coding, or a YAML path."
+                f"Unknown suite: {name_or_path}. Use core, smoke, email, payments, coding, research-factors, authorization-boundaries, or a YAML path."
             )
         data = _core_suite().model_dump()
     if "scenarios" not in data:

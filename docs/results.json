@@ -2961,7 +2961,8 @@
       "Browser policy cannot inspect destinations hidden behind clicks. Native smoke cases do not establish full-benchmark effectiveness.",
       "AgentDojo baseline attack probe did not succeed; browser tasks failed or timed out. These cases cannot establish prevented attack success.",
       "SuiteCRM snapshot restoration covers its dedicated database for task47 only.",
-      "ST runtime intentionally overrides upstream Playwright pins with 1.64.0 for macOS compatibility; three dependency-pin incompatibilities remain documented."
+      "ST runtime intentionally overrides upstream Playwright pins with 1.64.0 for macOS compatibility; three dependency-pin incompatibilities remain documented.",
+      "The recorded DoomArena trials predate a MiniWoB wrapper fix: a redundant native-gateway initialization reload destroyed the already initialized task. Their failures are confounded and cannot be attributed solely to the model. Targeted native extensions use the corrected wrapper."
     ],
     "attempted_episodes": 636,
     "condition_runs": 24,
@@ -3027,6 +3028,11 @@
         ]
       },
       "scope": "Only the 24 runs listed in this summary are included in the reported comparison."
+    },
+    "post_evaluation_findings": {
+      "doomarena_setup": "The recorded DoomArena trials predate a MiniWoB wrapper fix: a redundant native-gateway initialization reload destroyed the already initialized task. Their failures are confounded and cannot be attributed solely to the model. Targeted native extensions use the corrected wrapper.",
+      "details": "docs/authorization-boundaries.md",
+      "original_run_metrics_preserved": true
     }
   }
 }

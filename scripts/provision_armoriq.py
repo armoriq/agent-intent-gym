@@ -22,14 +22,17 @@ from agent_intent_bench.settings import load_environment
 
 ROOT = Path(__file__).resolve().parents[1]
 TRACKS = ("intent-gym", "agentdojo", "stwebagentbench", "doomarena")
+OPTIONAL_TRACKS = ("authorization-boundaries", "agentdojo-bcc")
 
 
 def tool_catalog(track, inventory):
     sources = (
         {"core", "research-factors"}
         if track == "intent-gym"
+        else {"authorization-boundaries"}
+        if track == "authorization-boundaries"
         else {"agentdojo/workspace"}
-        if track == "agentdojo"
+        if track in {"agentdojo", "agentdojo-bcc"}
         else {"browser-action-mapper"}
     )
     tools = {}
@@ -116,11 +119,34 @@ def import_apikey(document, folder, key):
 def write_runtime_profile(root, agents, policies):
     source = ROOT / "examples/armoriq-inside"
     profile = yaml.safe_load((source / "experiment.yaml").read_text())
+    if "authorization-boundaries" in policies:
+        profile["tracks"].append(
+            {
+                "name": "authorization-boundaries",
+                "kind": "gym",
+                "config": "authorization-boundaries.yaml",
+                "suite": "authorization-boundaries",
+            }
+        )
+    if "agentdojo-bcc" in policies:
+        profile["tracks"].append(
+            {"name": "agentdojo-bcc", "kind": "native", "config": "agentdojo-bcc.yaml"}
+        )
+    selected_tracks = []
     folder = root / "run-configs"
     folder.mkdir(exist_ok=True)
     for track in profile["tracks"]:
         config = yaml.safe_load((source / track["config"]).read_text())
-        identity = config.get("benchmark", "intent-gym")
+        identity = config.get(
+            "benchmark",
+            "authorization-boundaries"
+            if track["name"] == "authorization-boundaries"
+            else "intent-gym",
+        )
+        identity = config["guard"]["options"].get("provisioning_track", identity)
+        if identity not in policies:
+            continue
+        selected_tracks.append(track)
         catalog = root / identity / "tools.json"
         config["guard"]["options"].update(
             agent_id=agents[policies[identity]["target"]["agent"]],
@@ -130,14 +156,15 @@ def write_runtime_profile(root, agents, policies):
         destination = folder / Path(track["config"]).name
         destination.write_text(yaml.safe_dump(config, sort_keys=False))
         track["config"] = "run-configs/" + destination.name
+    profile["tracks"] = selected_tracks
     (root / "experiment.yaml").write_text(yaml.safe_dump(profile, sort_keys=False))
 
 
-def prepare(root: Path, org_id: str, deployment: str | None = None):
+def prepare(root: Path, org_id: str, deployment: str | None = None, tracks=TRACKS):
     source = ROOT / "examples/armoriq-inside/policies"
     schema = json.loads((ROOT / "docs/schemas/armor-policy-v2-benchmark.schema.json").read_text())
     policies = {}
-    for track in TRACKS:
+    for track in tracks:
         document = yaml.safe_load((source / f"{track}.yaml").read_text())
         document["metadata"]["orgId"] = org_id
         if deployment:
@@ -179,6 +206,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--register", action="store_true")
     parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--tracks", nargs="+", choices=(*TRACKS, *OPTIONAL_TRACKS), default=TRACKS)
     parser.add_argument(
         "--deployment", help="Unique campaign suffix; use a new value when policies change"
     )
@@ -200,7 +228,7 @@ def main():
     with httpx.Client(base_url=base, headers={"X-API-Key": key}, timeout=30) as client:
         bootstrap = api(client, "POST", "/iap/sdk/bootstrap", {})
     org_id = bootstrap["org"]["orgId"]
-    policies = prepare(root, org_id, args.deployment)
+    policies = prepare(root, org_id, args.deployment, args.tracks)
     report_path = root / "provisioning.json"
     report = json.loads(report_path.read_text()) if report_path.exists() else {}
     if report.get("org_id") != org_id:

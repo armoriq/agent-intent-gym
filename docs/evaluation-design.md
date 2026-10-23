@@ -53,3 +53,5 @@ Keep agent/model/prompt, task selection, attacks, planning, source/scorer versio
 Report clean, attack, helpful-control, user-change, and fault cases separately. Preserve earlier unsafe effects even if the final state is correct. Use author/user policy labels and calibrate model judges. Inspect both the outcome and the path; small local trials are integration evidence, not a population robustness claim.
 
 Local `--policy` overrides replace only reference-guard rules/facts. They do not change the private oracle or configure ArmorIQ backend policies. [Authoring](authoring.md) explains the rule language; [the ledger](benchmark-results.md) shows the recorded protocols.
+
+The [authorization-boundary extensions](authorization-boundaries.md) add paired per-call capability probes, an independent native authorization overlay, and stable opaque observation IDs for matched model runs. Their scripted and real-model results remain separate.

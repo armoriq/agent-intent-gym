@@ -32,7 +32,7 @@ def tool_entry(name, parameters=None, description="", default_mcp="intentbench")
 
 def export_inventory(runtime: Path, default_mcp="intentbench"):
     groups = []
-    for name in ("core", "research-factors"):
+    for name in ("core", "research-factors", "authorization-boundaries"):
         suite = load_suite(name)
         tools = {}
         for scenario in suite.scenarios:

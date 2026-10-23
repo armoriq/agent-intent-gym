@@ -17,6 +17,7 @@ class BenchmarkConfig(Model):
     state_reset_factory: str | None = None
     guard: AdapterConfig | None = None
     contract: Intent | None = None
+    authorization_oracle: Intent | None = None
     action_mapper: str | None = None
     guard_plan: list[ToolCall] = Field(default_factory=list)
     plan_factory: str | None = None
@@ -31,6 +32,26 @@ class BenchmarkConfig(Model):
 
     @model_validator(mode="after")
     def validate_integration(self):
+        if self.authorization_oracle:
+
+            def check_refs(value):
+                if isinstance(value, dict):
+                    if "ref" in value and str(value["ref"]).split(".")[0] not in {"args", "intent"}:
+                        raise ValueError(
+                            "Native authorization overlays currently support args/intent references only"
+                        )
+                    for child in value.values():
+                        check_refs(child)
+                elif isinstance(value, list):
+                    for child in value:
+                        check_refs(child)
+
+            for rule in self.authorization_oracle.rules:
+                if rule.kind not in {"allow_tools", "predicate"}:
+                    raise ValueError(
+                        "Native authorization overlays currently support per-call tool/predicate rules only"
+                    )
+                check_refs(rule.model_dump())
         if len(set(self.task_ids)) != len(self.task_ids):
             raise ValueError("task_ids must be unique")
         if self.agent.kind not in {"python", "http"}:
@@ -45,7 +66,11 @@ class BenchmarkConfig(Model):
             raise ValueError(
                 "Guarded native runs require an explicit guard and author-owned contract"
             )
-        if self.guard and self.benchmark != "agentdojo" and not self.action_mapper:
+        if (
+            (self.guard or self.authorization_oracle)
+            and self.benchmark != "agentdojo"
+            and not self.action_mapper
+        ):
             raise ValueError("Browser actions require an explicit module:action_mapper for guards")
         if (
             self.guard

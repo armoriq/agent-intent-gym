@@ -54,7 +54,7 @@ def matched_config(config, condition):
 
 def pairing_identity(config):
     data = config.model_dump()
-    for key in ("guard", "mode", "instrumentation"):
+    for key in ("guard", "guard_policy", "mode", "instrumentation"):
         data.pop(key, None)
     data["resolved_agent"] = model_identity(config.agent)
     return canonical_hash(data)

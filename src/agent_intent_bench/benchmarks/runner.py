@@ -22,6 +22,7 @@ from ..inside import ArmorIQInsideAgent
 from ..models import Action
 from ..session import utc_now
 from ..settings import load_environment, model_identity, protection_identity, resolve_adapter
+from .authorization import audit_episode, label_proposal
 from .common import json_native, load_symbol, source_identity
 from .environments import create_environment, derived_scores
 from .models import BenchmarkConfig, BenchmarkResult, NativeEpisode, StateResetReceipt
@@ -119,7 +120,9 @@ def manifest_for(config):
         "agent_is_fixture": bool(config.agent.options.get("fixture"))
         or config.agent.factory == "examples.benchmarks.native_agent:create_agent",
         "benchmark_protocol": "Gym-owned agent loop; native task/attack grading. Not an official upstream leaderboard submission.",
-        "guard_evaluation": "No independent per-proposal labels; detection/overblocking are unmeasured",
+        "guard_evaluation": "Independent authored authorization overlay; native grades unchanged"
+        if config.authorization_oracle
+        else "No independent per-proposal labels; detection/overblocking are unmeasured",
         "timeout_semantics": "Async agent/guard calls bounded; native blocking calls and cleanup cooperate at step boundaries",
         "reviewed_revision_is_installed_revision": False,
     }
@@ -265,12 +268,21 @@ async def run_episode(config, task_id, repeat, stop):
             episode.steps += 1
             decision = None
             is_finish = config.benchmark == "agentdojo" and action.get("kind") == "finish"
-            if guard and (not is_finish or config.guard_responses):
+            mapped = None
+            authorization = {}
+            if (guard and (not is_finish or config.guard_responses)) or config.authorization_oracle:
                 mapped = Action.model_validate(
                     mapper(copy.deepcopy(action)) if mapper else copy.deepcopy(action)
                 )
                 if is_finish:
                     mapped = Action(tool="agent__respond", args=copy.deepcopy(action["args"]))
+                if config.authorization_oracle:
+                    authorization = {
+                        "authorization_verdict": label_proposal(
+                            mapped, config.authorization_oracle, history
+                        )
+                    }
+            if guard and (not is_finish or config.guard_responses):
                 context = {
                     "episode_id": episode.id,
                     "request": public_request,
@@ -305,6 +317,7 @@ async def run_episode(config, task_id, repeat, stop):
                             "action": serialized_action,
                             "decision": decision.model_dump(),
                             "native_step_executed": False,
+                            **authorization,
                         }
                     )
                     continue
@@ -314,7 +327,7 @@ async def run_episode(config, task_id, repeat, stop):
             if time.monotonic() >= deadline:
                 break
             observation, reward, terminated, truncated, info = await native_call(env.step, action)
-            if guard and (not is_finish or config.guard_responses):
+            if mapped is not None:
                 history.append({"tool": mapped.tool, "args": copy.deepcopy(mapped.args)})
             episode.transitions.append(
                 {
@@ -327,6 +340,7 @@ async def run_episode(config, task_id, repeat, stop):
                     "info": json_native(info),
                     "decision": decision.model_dump() if decision else None,
                     "native_step_executed": True,
+                    **authorization,
                 }
             )
             if terminated or truncated:
@@ -334,6 +348,10 @@ async def run_episode(config, task_id, repeat, stop):
                 break
         episode.native_scores = json_native(await native_call(env.grade))
         episode.derived_scores = derived_scores(config.benchmark, episode.native_scores)
+        if config.options.get("read_only_audit"):
+            episode.derived_scores["read_only_state_audit"] = json_native(
+                await native_call(env.read_only_audit)
+            )
     except Exception as error:
         episode.status, episode.error = "error", safe_error(error, config)
     finally:
@@ -351,6 +369,8 @@ async def run_episode(config, task_id, repeat, stop):
                 episode.status = "error"
                 episode.error = episode.error or safe_error(error, config)
         native_executor.shutdown(wait=True)
+        if config.authorization_oracle:
+            episode.derived_scores["authorization_audit"] = audit_episode(episode)
     return episode
 
 

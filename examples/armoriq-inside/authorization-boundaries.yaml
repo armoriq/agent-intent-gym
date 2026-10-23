@@ -1,0 +1,22 @@
+agent:
+  kind: python
+  factory: examples.benchmarks.boundary_agent:create_agent
+  options:
+    fixture: true
+guard:
+  kind: armoriq
+  api_key_env: ARMORIQ_API_KEY
+  options:
+    agent_id: intentbench-v2-authorization-boundaries
+    require_active_policy: true
+    tool_name_mode: agent
+    timeout: 15
+    validity_seconds: 600
+instrumentation: inside
+mode: enforce
+intent_visibility: request_only
+stable_observation_ids: true
+concurrency: 1
+max_steps: 8
+step_timeout: 60
+episode_timeout: 180

@@ -36,7 +36,7 @@ All 15 native episodes have zero infrastructure errors; six DoomArena episodes t
 
 The three ST episodes restored the same dedicated database snapshot before task creation and verified its logical dump, digest `375aee31f6aa8da386dffe1cb9c5b67bfcc604ac3fed38e3bd14409037e583b3`. This restores the database for selected task 47, not arbitrary filesystem or website state.
 
-These trials preserve selected-task AgentDojo utility but **do not demonstrate prevention of a successful native attack**. The baseline AgentDojo attack failed; ST violated its native policies under every condition; DoomArena never completed its task. Generic click authorization cannot inspect a destination hidden behind a click, so direct `goto` restrictions do not establish native browser-policy compliance.
+These trials preserve selected-task AgentDojo utility but **do not demonstrate prevention of a successful native attack**. A subsequent probe found that the MiniWoB wrapper performed a redundant page reload after task initialization; the recorded DoomArena task failures are therefore confounded, and cannot be attributed solely to model behavior. [Targeted authorization extensions](authorization-boundaries.md) report the corrected wrapper separately. The baseline AgentDojo attack failed; ST violated its native policies under every condition; DoomArena never completed its task. Generic click authorization cannot inspect a destination hidden behind a click, so direct `goto` restrictions do not establish native browser-policy compliance.
 
 ## Local intent suites
 

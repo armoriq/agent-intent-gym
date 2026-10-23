@@ -223,6 +223,7 @@ class RunConfig(Model):
     step_timeout: float = Field(default=30, gt=0)
     concurrency: int = Field(default=4, ge=1, le=128)
     intent_visibility: Literal["structured", "request_only"] = "structured"
+    stable_observation_ids: bool = False
     scenario_ids: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
     guard_policy: Intent | None = None

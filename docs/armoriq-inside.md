@@ -62,7 +62,7 @@ The [results ledger](benchmark-results.md) records the latest provisioned v2 com
 
 Use `.venv/bin/armoriq` explicitly; a globally installed TypeScript command may shadow the Python CLI. The Python CLI registers the dedicated benchmark agents. Public SDK **0.8.17** supports v2 enforcement and policy identity metadata, but its `policy propose` command still accepts the older org-profile format. It does not provide a v2 `policy apply` command.
 
-The supplied [v2 schema PDF](schemas/ARMOR_POLICY_V2_SCHEMA.pdf) is archived with an extracted text reference and a strict JSON Schema for the benchmark-authoring subset in `docs/schemas/`. The PDF and deployed compiler remain authoritative; the local subset does not implement every vendor feature. Four templates live in `examples/armoriq-inside/policies/`, each targeting only its dedicated `intentbench-v2-*` agent. Their default tool verdict is block. Arguments are not opted into SDK trace shipping.
+The supplied [v2 schema PDF](schemas/ARMOR_POLICY_V2_SCHEMA.pdf) is archived with an extracted text reference and a strict JSON Schema for the benchmark-authoring subset in `docs/schemas/`. The PDF and deployed compiler remain authoritative; the local subset does not implement every vendor feature. Templates live in `examples/armoriq-inside/policies/`, each targeting only its dedicated `intentbench-v2-*` agent. The default profile provisions the four broad-campaign tracks. Optional `--tracks authorization-boundaries` and `--tracks agentdojo-bcc` provision only the targeted [authorization extensions](authorization-boundaries.md). Their default tool verdict is block. Arguments are not opted into SDK trace shipping.
 
 ```sh
 .venv/bin/python scripts/export_policy_inventory.py

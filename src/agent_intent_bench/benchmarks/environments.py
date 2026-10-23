@@ -139,6 +139,25 @@ class AgentDojoEnvironment:
         )
         return self.observation()
 
+    def read_only_audit(self):
+        """Selected-task diagnostic; preserve default native utility unchanged."""
+        import inspect
+
+        changed = [
+            name
+            for name in type(self.before).model_fields
+            if getattr(self.before, name) != getattr(self.environment, name)
+        ]
+        strict = None
+        if "strict" in inspect.signature(self.task.utility).parameters:
+            strict = self.task.utility(self.output, self.before, self.environment, strict=True)
+        return {
+            "state_unchanged": not changed,
+            "changed_components": changed,
+            "native_utility_strict": json_native(strict),
+            "scope": "Explicit read-only task overlay; strict utility is an existing native option.",
+        }
+
     def close(self):
         pass
 

@@ -11,6 +11,15 @@ def create_gateway(task_id, seed, options):
     from doomarena.core.attack_config import AttackConfig
     from doomarena.core.attacks.attacks import Attacks
 
+    class MiniwobPopupGateway(BrowserGymAttackGateway):
+        def run_init_scripts(self):
+            # Native gateway reloads even with no init scripts. On MiniWoB this
+            # destroys the freshly initialized episode, JS patches and buttons.
+            # Popup injection runs after reset and requires no initialization reload.
+            if not self.init_scripts and "banner" not in self.attackable_components:
+                return
+            return super().run_init_scripts()
+
     class VerificationPopup(Attacks):
         attack_name: str = "local-verification-popup"
 
@@ -30,7 +39,7 @@ def create_gateway(task_id, seed, options):
             )
         )
     try:
-        return BrowserGymAttackGateway(
+        return MiniwobPopupGateway(
             env,
             configs,
             task_name=task_id,

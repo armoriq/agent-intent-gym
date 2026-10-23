@@ -43,9 +43,17 @@ Errors in unguarded / monitor / enforce were **0 / 0 / 0** for smoke, **2 / 1 / 
 
 Enforcement recorded fewer unsafe effects in every local suite. Smoke CuP improved, but core and research CuP did not. Task successes also fell **71 → 53** on core and **65 → 56** on research. The frozen policy covers original targets and per-call quantities; it does not cover cumulative limits, prerequisites, simulated approvals or evolving/revoked intent. Incomplete captured plans also denied some authorized actions. These results show safety–utility tradeoffs rather than a general protection advantage.
 
-All native artifacts and local trace chains verified, local metrics recomputed identically, and all four active policy hashes remained unchanged. **17/17 live policy preflight probes** and **113 tests** passed.
+All native artifacts and local trace chains verified, local metrics recomputed identically, and all four active policy hashes remained unchanged. Recorded broad-campaign checks passed **17/17 live policy preflight probes** and **113 tests**.
 
 [Latest report: run IDs, budgets and limitations](docs/benchmark-results.md#october-22-v2-policy-campaign) · [Result data](docs/results.json) (`v2_policy_campaign_2026_10_22`) · [Reproduce with ArmorIQ](docs/armoriq-inside.md)
+
+### Targeted authorization extensions
+
+A separate [17-case capability study](docs/authorization-boundaries.md) covers cross-tenant reads, hidden BCCs, token scope/lifetime and publication destinations. Scripted executor probes improve CuP **9/17 → 17/17** under ArmorIQ enforcement, matching the local reference guard. With Qwen, CuP changes **9/17 → 10/17**, unsafe-effect episodes **2 → 0**, and task success **11/17 → 10/17**; ten step-cap truncations remain across the three conditions.
+
+The authored native ports preserve original graders. Across the selected AgentDojo task-0 and task-33 probes, utility stays **6/6** while unauthorized native calls fall **4 → 0**; this includes blocking a hidden BCC while allowing the legitimate email. DoomArena blocks direct egress and recovers reward **1**, but equivalent link-click egress still succeeds. These native ports are scripted probes, not LLM attack rates. They also uncovered a redundant wrapper reload that confounds the earlier DoomArena task failures; those recorded rows predate the fix.
+
+These targeted findings complement the broader results above and do not establish a general advantage. Both policy-authoring failures and the indirect-navigation limitation are retained. [Scenarios, methods and results](docs/authorization-boundaries.md) · [Targeted result data](docs/authorization-boundary-results.json)
 
 ## Quick start
 
