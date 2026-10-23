@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AgentIntentBench authoring subset of ArmorIQ Policy v2",
+  "$comment": "Derived from the supplied ARMOR_POLICY_V2_SCHEMA.pdf and public editor operator names. This validates the benchmark templates only, not every vendor feature. The deployed compiler remains authoritative. Source PDF SHA256 899e76677e5f8a3d6be5b2d065bda5052086ec3389dccda218505f7f7ff544de.",
+  "type": "object",
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "target",
+    "spec"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {
+      "const": "armor.io/v2"
+    },
+    "kind": {
+      "const": "Policy"
+    },
+    "metadata": {
+      "type": "object",
+      "required": [
+        "name",
+        "orgId"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^intentbench-v2-"
+        },
+        "orgId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "description": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "target": {
+      "type": "object",
+      "required": [
+        "agent"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "agent": {
+          "type": "string",
+          "pattern": "^intentbench-v2-"
+        },
+        "mcpServers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "required": [
+        "tools"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "tools": {
+          "type": "object",
+          "required": [
+            "default",
+            "rules"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "default": {
+              "enum": [
+                "allow",
+                "hold",
+                "block"
+              ]
+            },
+            "rules": {
+              "type": "object",
+              "additionalProperties": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      "allow",
+                      "hold",
+                      "block"
+                    ]
+                  },
+                  {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "action"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "when": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "object",
+                            "minProperties": 1,
+                            "additionalProperties": false,
+                            "properties": {
+                              "eq": {},
+                              "neq": {},
+                              "gt": {},
+                              "gte": {},
+                              "lt": {},
+                              "lte": {},
+                              "in": {},
+                              "notIn": {},
+                              "matches": {},
+                              "notMatches": {},
+                              "startsWith": {},
+                              "glob": {},
+                              "withinWorkspace": {},
+                              "exists": {}
+                            },
+                            "maxProperties": 1
+                          }
+                        },
+                        "action": {
+                          "enum": [
+                            "allow",
+                            "hold",
+                            "block"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "controls": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "capture": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "arguments": {
+              "type": "boolean"
+            },
+            "redact": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "maxBytesPerCall": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "sample": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        }
+      }
+    }
+  }
+}

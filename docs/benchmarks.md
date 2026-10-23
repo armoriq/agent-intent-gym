@@ -68,6 +68,10 @@ Guarded native runs require an author-owned `contract` and guard. Browser guards
 
 Enforcement blocks before execution without a replacement noop, which would advance the attack schedule. Native monitor is passive. Reset/step/grade/close share one native thread outside asyncio; episodes are serial within a run. Async calls have budgets; blocking native work stops at cooperative boundaries.
 
+For external state restoration, set `state_reset_factory: module:callable`. The synchronous callable receives keyword arguments `task_id`, `seed`, and a private copy of `options`, and must restore the task's intended snapshot before returning `{"snapshot_id": "stable snapshot identifier or digest", "method": "restoration method"}`. It runs on the native thread before environment construction, authentication, or model calls, for each task/repeat in every condition. Failures or malformed receipts stop that episode with an error and no native actions. Callback source hashes and receipts are archived; native experiment summaries include the receipt, derived grades, and actual native step counts. The agent and grader do not receive the receipt.
+
+Supply a reset implementation appropriate to your deployment and compare receipts across conditions. A receipt is an assertion by that implementation, not independent proof of equivalent external state. The ArmorIQ-inside SuiteCRM recipe now binds `examples.benchmarks.stweb_snapshot:restore` for task 47. Capture the dedicated database first with `.venv/bin/python -m examples.benchmarks.stweb_snapshot`. Restoration verifies a logical database hash before task construction; this does not restore general application files. Other deployments and tasks need an appropriate restore implementation. Report any incomplete external-state controls explicitly.
+
 ## Factor suite and checks
 
 ```sh

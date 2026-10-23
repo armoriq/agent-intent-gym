@@ -9,6 +9,9 @@ agent:
     temperature: 0
     api_key_optional: true
     send_seed: true
+    max_tokens: 1024
+    request_timeout: 180
+    require_initial_plan: true
 guard:
   kind: armoriq
   api_key_env: ARMORIQ_API_KEY
@@ -16,6 +19,9 @@ guard:
     mcp_name: intentbench
     timeout: 15
     validity_seconds: 600
+    agent_id: intentbench-v2-intent-gym
+    require_active_policy: true
+    tool_name_mode: agent
 instrumentation: inside
 mode: enforce
 intent_visibility: request_only

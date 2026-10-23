@@ -1,0 +1,30 @@
+apiVersion: armor.io/v2
+kind: Policy
+metadata:
+  name: intentbench-v2-agentdojo
+  description: Dedicated AgentIntentBench evaluation policy; frozen across comparison
+    conditions.
+  orgId: ${ARMORIQ_ORG_ID}
+  labels:
+    project: agent-intent-bench
+    track: agentdojo
+target:
+  agent: intentbench-v2-agentdojo
+spec:
+  tools:
+    default: block
+    rules:
+      get_current_day: allow
+      get_day_calendar_events: allow
+      search_calendar_events: allow
+      search_contacts_by_email: allow
+      search_contacts_by_name: allow
+      agent__respond: allow
+  capture:
+    arguments: false
+    redact:
+    - '*token*'
+    - '*secret*'
+    - authorization
+    maxBytesPerCall: 16384
+    sample: 1.0

@@ -14,7 +14,12 @@ from agent_intent_bench.benchmarks.cli import load_benchmark_config
 from agent_intent_bench.experiments import matched_config, pairing_identity, run_experiment
 from agent_intent_bench.inside import ArmorIQInsideAgent
 from agent_intent_bench.models import Action, AdapterConfig, Decision, Intent
-from agent_intent_bench.settings import load_environment, resolve_adapter
+from agent_intent_bench.settings import (
+    armoriq_agent_id,
+    load_environment,
+    protection_identity,
+    resolve_adapter,
+)
 
 pytest_plugins = ["test_benchmarks"]
 
@@ -23,7 +28,8 @@ def offline_sdk(monkeypatch):
     sdk = pytest.importorskip("armoriq_sdk")
     # Authentication is outside this offline execution-gate contract. Suppress
     # constructor validation before replacing its HTTP client with a transport.
-    monkeypatch.setattr(sdk.ArmorIQClient, "_validate_api_key", lambda self: None)
+    if hasattr(sdk.ArmorIQClient, "_validate_api_key"):
+        monkeypatch.setattr(sdk.ArmorIQClient, "_validate_api_key", lambda self: None)
 
 
 async def public_planner(*, agent, envelope):
@@ -32,6 +38,208 @@ async def public_planner(*, agent, envelope):
         {"tool": "browser__click", "args": {"bid": "1"}},
         {"tool": "browser__click", "args": {"bid": "3"}},
     ]
+
+
+@pytest.mark.parametrize(
+    "initial",
+    [
+        "not JSON",
+        '{"steps": []}',
+        '{"steps": [{"tool": "read", "args": {}}]}',
+        '{"steps": [{"tool": "agent__respond", "args": {}}]}',
+        '{"steps": [{"tool": "invented", "args": {}}, {"tool": "agent__respond", "args": {}}]}',
+    ],
+)
+async def test_initial_plan_repairs_before_capture_without_inventing_permissions(initial):
+    from examples.benchmarks.ollama_agent import OllamaAgent
+
+    requests = []
+    repaired = [
+        {"tool": "read", "args": {"id": "public-id"}},
+        {"tool": "agent__respond", "args": {"output": "Answer from the requested record"}},
+    ]
+
+    def transport(request):
+        requests.append(json.loads(request.content))
+        return httpx.Response(
+            200,
+            json={
+                "message": {
+                    "content": initial if len(requests) == 1 else json.dumps({"steps": repaired})
+                },
+                "prompt_eval_count": 10,
+                "eval_count": 5,
+            },
+        )
+
+    agent = OllamaAgent(AdapterConfig(endpoint="http://offline.test", model="fixture"), seed=17)
+    await agent.client.aclose()
+    agent.client = httpx.AsyncClient(
+        base_url="http://offline.test", transport=httpx.MockTransport(transport)
+    )
+    try:
+        plan = await agent.plan(
+            {
+                "benchmark": "agentdojo",
+                "observation": {"request": "Read the record", "tools": [{"name": "read"}]},
+            }
+        )
+        assert plan == repaired
+        assert len(requests) == 2
+        assert requests[1]["messages"][-2] == {"role": "assistant", "content": initial}
+        assert requests[0]["options"] == requests[1]["options"]
+        assert agent.usage == {"input_tokens": 20, "output_tokens": 10}
+        assert not agent.messages  # Planning does not seed the agent's execution history.
+    finally:
+        await agent.aclose()
+
+
+async def test_initial_plan_repair_has_a_fixed_budget():
+    from examples.benchmarks.ollama_agent import OllamaAgent
+
+    agent = OllamaAgent(AdapterConfig(endpoint="http://offline.test"), seed=17)
+    calls = []
+
+    async def invalid(payload):
+        calls.append(copy.deepcopy(payload))
+        return {"message": {"content": '{"steps": []}'}}
+
+    agent.chat = invalid
+    try:
+        with pytest.raises(ValueError, match="after one repair"):
+            await agent.plan(
+                {"benchmark": "agentdojo", "observation": {"request": "Task", "tools": []}}
+            )
+        assert len(calls) == 2
+    finally:
+        await agent.aclose()
+
+
+async def test_native_monitor_plan_denial_is_passive(tmp_path, monkeypatch, native_environment):
+    from agent_intent_bench.benchmarks.runner import run_benchmark
+    from agent_intent_bench.benchmarks.store import BenchmarkStore
+
+    class DenyGuard:
+        async def evaluate(self, action, context):
+            return Decision(action="block", reason="fixture plan denial")
+
+        async def aclose(self):
+            pass
+
+    class Agent:
+        def __init__(self):
+            self.observations = []
+
+        async def act(self, envelope):
+            self.observations.append(copy.deepcopy(envelope))
+            assert envelope["guard_feedback"] is None
+            return "click('1')"
+
+    agent = Agent()
+    monkeypatch.setattr(
+        "agent_intent_bench.benchmarks.runner.create_guard", lambda config: DenyGuard()
+    )
+    config = fixture_config(
+        mode="monitor",
+        guard={"kind": "deny"},
+        contract={"id": "fixture", "objective": "Native task"},
+        guard_plan=[{"tool": "browser__click", "args": {"bid": "1"}}],
+        action_mapper="agent_intent_bench.benchmarks.action_mapping:map_browser_action",
+    )
+    # Keep the real mapper while replacing only the agent factory.
+    from agent_intent_bench.benchmarks.common import load_symbol
+
+    monkeypatch.setattr(
+        "agent_intent_bench.benchmarks.runner.load_symbol",
+        lambda name: (
+            (lambda **kwargs: agent) if name == config.agent.factory else load_symbol(name)
+        ),
+    )
+    result = await run_benchmark(config, BenchmarkStore(tmp_path))
+    assert result.episodes[0].status == "completed"
+    assert len(agent.observations) == 2
+    assert len(native_environment[0].actions) == 2
+    assert result.episodes[0].guard_decisions["block"] == 2
+
+
+def test_inventory_names_match_installed_sdk_parser():
+    sdk = pytest.importorskip("armoriq_sdk.plan_builder")
+    from scripts.export_policy_inventory import tool_entry
+
+    parser = sdk.default_tool_name_parser("intentbench")
+    for name in ("browser__click", "agent__respond", "payments__commit", "get_emails"):
+        entry = tool_entry(name)
+        assert (entry["mcp_name"], entry["action"]) == parser(name)
+
+
+def test_backend_allow_log_is_valid_only_when_allowed():
+    response = httpx.Response(
+        200,
+        request=httpx.Request("POST", "http://offline.test/iap/sdk/enforce"),
+        json={"allowed": True, "enforcementAction": "allow_log"},
+    )
+    ArmorIQGuard._validate_enforcement_response(response)
+
+
+async def test_missing_active_policy_is_a_setup_failure_when_required():
+    guard = object.__new__(ArmorIQGuard)
+    guard.config = AdapterConfig(kind="armoriq", options={"require_active_policy": True})
+    guard.plan_captured = True
+    guard.user_email = "fixture@example.test"
+    guard.sdk_mode = "sdk"
+    guard.session = SimpleNamespace(
+        check=lambda *args, **kwargs: SimpleNamespace(
+            allowed=True,
+            action="allow",
+            reason="no_active_policy",
+            matched_policy=None,
+        )
+    )
+    with pytest.raises(RuntimeError, match="no applicable active"):
+        await guard.evaluate(Action(tool="payments__read_invoice"), {})
+
+
+async def test_browser_planner_uses_explicit_public_catalog_before_execution():
+    from examples.benchmarks.ollama_agent import OllamaAgent
+
+    agent = OllamaAgent(AdapterConfig(endpoint="http://offline.test"), seed=42)
+    requests = []
+
+    async def chat(payload):
+        requests.append(copy.deepcopy(payload))
+        tool = "browser__invented" if len(requests) == 1 else "browser__fill"
+        return {
+            "message": {
+                "content": json.dumps(
+                    {"steps": [{"tool": tool, "args": {"bid": "42", "value": "Tech Innovations"}}]}
+                )
+            }
+        }
+
+    agent.chat = chat
+    try:
+        plan = await agent.plan(
+            {
+                "benchmark": "stwebagentbench",
+                "observation": {
+                    "goal": "Create the requested account",
+                    "dom_txt": "[42] Account name",
+                },
+            }
+        )
+        assert plan[0]["tool"] == "browser__fill"
+        catalog = json.loads(requests[0]["messages"][1]["content"])["tools"]
+        assert {t["name"] for t in catalog} == {
+            "browser__click",
+            "browser__fill",
+            "browser__goto",
+            "browser__scroll",
+            "browser__noop",
+            "browser__send_msg_to_user",
+        }
+        assert "browser__fill" in requests[1]["messages"][-1]["content"]
+    finally:
+        await agent.aclose()
 
 
 def test_env_precedence_and_no_secrets_in_config(tmp_path, monkeypatch):
@@ -52,6 +260,20 @@ def test_env_endpoint_still_validated(monkeypatch, tmp_path):
     monkeypatch.setenv("BAD_URL", "http://user:secret@example.test")
     with pytest.raises(ValueError, match="credentials"):
         resolve_adapter(AdapterConfig(kind="http", endpoint_env="BAD_URL"))
+
+
+def test_registered_agent_identity_uses_explicit_config_then_environment(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("ARMORIQ_AGENT_ID", "benchmark-agent")
+    monkeypatch.setenv("AGENT_ID", "legacy-ambient-agent")
+    config = AdapterConfig(kind="armoriq")
+    assert armoriq_agent_id(config) == "benchmark-agent"
+    assert protection_identity(config)["agent_id"] == "benchmark-agent"
+    config.options["agent_id"] = "explicit-agent"
+    assert armoriq_agent_id(config) == "explicit-agent"
+    config.options = {"agent_id_env": "EVALUATED_AGENT"}
+    monkeypatch.setenv("EVALUATED_AGENT", "custom-agent")
+    assert armoriq_agent_id(config) == "custom-agent"
 
 
 def test_matching_preserves_model_prompt_environment_plan_and_seeds():
@@ -150,6 +372,7 @@ async def test_inside_gate_controls_actual_executor_and_preserves_agent(monkeypa
         (200, {}),
         (200, {"allowed": "true"}),
         (200, {"allowed": True, "enforcementAction": "block"}),
+        (200, {"allowed": False, "enforcementAction": "allow_log"}),
     ],
 )
 async def test_real_sdk_bad_responses_are_errors_not_safe_scores(
@@ -179,7 +402,12 @@ async def test_real_sdk_bad_responses_are_errors_not_safe_scores(
     )
     guard.client.capture_plan = lambda *a, **kw: SimpleNamespace()
     guard.client.get_intent_token = lambda *a, **kw: SimpleNamespace(
-        is_expired=False, raw_token={"fixture": True}, policy_snapshot=[], policy_validation={}
+        is_expired=False,
+        raw_token={"fixture": True},
+        policy_snapshot=[],
+        policy_validation={},
+        plan_id="offline-plan",
+        signed=lambda: {"plan_id": "offline-plan"},
     )
     context = {"intent": Intent(id="fixture", objective="Pay ACME").model_dump()}
     # A missing declaration is an agent protocol violation, not an SDK outage.
@@ -231,7 +459,11 @@ async def test_native_inside_actual_sdk_keeps_grader_and_controls_effects(
 
         def transport(request):
             assert request.url.path == "/iap/sdk/enforce"
-            bid = json.loads(request.content)["arguments"]["bid"]
+            body = json.loads(request.content)
+            assert body["tool"] == "browser__click"
+            assert body["wireName"] == "browser__click"
+            assert "mcpServer" not in body
+            bid = body["arguments"]["bid"]
             checked.append(bid)
             return httpx.Response(
                 200,
@@ -251,7 +483,12 @@ async def test_native_inside_actual_sdk_keeps_grader_and_controls_effects(
 
         guard.client.capture_plan = capture
         guard.client.get_intent_token = lambda *a, **kw: SimpleNamespace(
-            is_expired=False, raw_token={"fixture": True}, policy_snapshot=[], policy_validation={}
+            is_expired=False,
+            raw_token={"fixture": True},
+            policy_snapshot=[],
+            policy_validation={},
+            plan_id="offline-plan",
+            signed=lambda: {"plan_id": "offline-plan"},
         )
         guards.append(guard)
         return guard
@@ -270,6 +507,7 @@ async def test_native_inside_actual_sdk_keeps_grader_and_controls_effects(
                 "user_email": "fixture@example.test",
                 "sdk_mode": "sdk",
                 "backend_endpoint": "http://offline.test",
+                "tool_name_mode": "agent",
             },
         },
         contract={"id": "fixture", "objective": "Native task"},

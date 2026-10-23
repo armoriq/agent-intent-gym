@@ -1,6 +1,7 @@
 import copy
 import json
 import threading
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -75,6 +76,17 @@ def create_native_fixture(task_id, seed, options):
     return NativeFixture()
 
 
+def reset_native_fixture(*, task_id, seed, options):
+    import asyncio
+
+    with pytest.raises(RuntimeError, match="no running event loop"):
+        asyncio.get_running_loop()
+    Path(options["reset_marker"]).write_text(f"{task_id}:{seed}")
+    receipt = copy.deepcopy(options["reset_receipt"])
+    options.clear()
+    return receipt
+
+
 def config(**updates):
     data = {
         "benchmark": "stwebagentbench",
@@ -133,6 +145,40 @@ async def test_native_reports_rewards_and_thread_affinity_preserved(tmp_path, na
     payload["episodes"][0]["native_scores"]["reward"] = 1.0
     artifact.write_text(json.dumps(payload))
     assert not store.verify(result.id)
+
+
+@pytest.mark.parametrize("valid", [True, False])
+async def test_external_state_restored_before_environment_and_agent(
+    tmp_path, monkeypatch, native_environment, valid
+):
+    from agent_intent_bench.benchmarks import runner
+
+    marker = tmp_path / "restored"
+    create = runner.create_environment
+
+    def checked_create(config, task_id, seed):
+        assert marker.read_text() == f"{task_id}:{seed}"
+        return create(config, task_id, seed)
+
+    monkeypatch.setattr(runner, "create_environment", checked_create)
+    receipt = {"snapshot_id": "fixture-snapshot-sha256", "method": "fixture-restore"}
+    settings = config(
+        repeats=2,
+        state_reset_factory="test_benchmarks:reset_native_fixture",
+        options={"reset_marker": str(marker), "reset_receipt": receipt if valid else {}},
+    )
+    store = BenchmarkStore(tmp_path)
+    result = await run_benchmark(settings, store)
+    assert store.verify(result.id)
+    assert settings.options["reset_receipt"] == (receipt if valid else {})
+    if valid:
+        assert len(native_environment) == 2
+        assert all(e.status == "completed" for e in result.episodes)
+        assert [e.state_reset.model_dump() for e in result.episodes] == [receipt, receipt]
+    else:
+        assert not native_environment
+        assert result.summary["error"] == 2
+        assert all(e.native_scores == {} and e.steps == 0 for e in result.episodes)
 
 
 async def test_doomarena_keeps_native_attack_filter_results(tmp_path, native_environment):

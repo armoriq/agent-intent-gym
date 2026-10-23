@@ -113,6 +113,11 @@ async def run_experiment(
                         "seed": e.seed,
                         "status": e.status,
                         "native_scores": e.native_scores,
+                        "derived_scores": e.derived_scores,
+                        "native_steps_executed": sum(
+                            t.get("native_step_executed", False) for t in e.transitions
+                        ),
+                        "state_reset": e.state_reset.model_dump() if e.state_reset else None,
                         "guard_decisions": e.guard_decisions,
                         "error": e.error,
                     }

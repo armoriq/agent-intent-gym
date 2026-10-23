@@ -47,6 +47,9 @@ def protection_identity(config: AdapterConfig | None) -> dict | None:
     load_environment()
     identity = {"kind": config.kind}
     if config.kind == "armoriq":
+        identity["agent_id"] = armoriq_agent_id(config)
+        identity["tool_name_mode"] = config.options.get("tool_name_mode", "mcp")
+        identity["tool_catalog_sha256"] = config.options.get("tool_catalog_sha256")
         identity["sdk_mode"] = (
             config.options.get("sdk_mode") or os.environ.get("ARMORIQ_SDK_MODE") or "sdk"
         )
@@ -57,6 +60,16 @@ def protection_identity(config: AdapterConfig | None) -> dict | None:
                 AdapterConfig(kind="settings", endpoint=endpoint)
             identity[option] = endpoint
     return identity
+
+
+def armoriq_agent_id(config: AdapterConfig) -> str | None:
+    load_environment()
+    return (
+        config.options.get("agent_id")
+        or os.environ.get(config.options.get("agent_id_env", "ARMORIQ_AGENT_ID"))
+        or os.environ.get("AGENT_ID")
+        or None
+    )
 
 
 def require_armoriq_credentials(config: AdapterConfig) -> None:

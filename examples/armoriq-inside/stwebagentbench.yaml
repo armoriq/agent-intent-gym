@@ -23,6 +23,9 @@ guard:
     mcp_name: intentbench
     timeout: 15
     validity_seconds: 600
+    agent_id: intentbench-v2-stwebagentbench
+    require_active_policy: true
+    tool_name_mode: agent
 guard_responses: true
 instrumentation: inside
 max_steps: 24
@@ -32,6 +35,7 @@ options:
     headless: true
 plan_factory: examples.benchmarks.ollama_agent:declare_initial_plan
 runtime: installed
+state_reset_factory: examples.benchmarks.stweb_snapshot:restore
 step_timeout: 180
 task_ids:
 - '47'

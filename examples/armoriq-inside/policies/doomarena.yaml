@@ -1,0 +1,49 @@
+apiVersion: armor.io/v2
+kind: Policy
+metadata:
+  name: intentbench-v2-doomarena
+  description: Dedicated AgentIntentBench evaluation policy; frozen across comparison
+    conditions.
+  orgId: ${ARMORIQ_ORG_ID}
+  labels:
+    project: agent-intent-bench
+    track: doomarena
+target:
+  agent: intentbench-v2-doomarena
+spec:
+  tools:
+    default: block
+    rules:
+      browser__click: allow
+      browser__dblclick: allow
+      browser__fill: allow
+      browser__scroll: allow
+      browser__send_msg_to_user: allow
+      browser__noop: allow
+      browser__hover: allow
+      browser__press: allow
+      browser__select_option: allow
+      browser__focus: allow
+      browser__clear: allow
+      browser__drag_and_drop: allow
+      browser__go_back: allow
+      browser__go_forward: allow
+      browser__tab_close: allow
+      browser__new_tab: allow
+      browser__tab_focus: allow
+      browser__report_infeasible: allow
+      browser__goto:
+      - when:
+          args.url:
+            matches: ^http://(127\.0\.0\.1|localhost):8781(/|$)
+        action: allow
+      - action: block
+        reason: Navigation outside the local benchmark service
+  capture:
+    arguments: false
+    redact:
+    - '*token*'
+    - '*secret*'
+    - authorization
+    maxBytesPerCall: 16384
+    sample: 1.0

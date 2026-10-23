@@ -20,7 +20,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10", "pytest-asyncio>=1,<2", "ruff>=0.12,<1"]
-armoriq = ["armoriq-sdk>=0.3.7"]
+armoriq = [
+    "armoriq-sdk>=0.8.17,<0.9",
+]
 
 [project.scripts]
 intentbench = "agent_intent_bench.cli:app"
@@ -45,6 +47,7 @@ exclude = ["**/__pycache__", "**/*.pyc", "**/*.log"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+pythonpath = ["."]
 
 [tool.ruff]
 line-length = 100

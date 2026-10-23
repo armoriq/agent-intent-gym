@@ -32,6 +32,12 @@ def main():
     inventory = {}
     for runtime in runtimes:
         python = str(runtime / "bin/python")
+        # Both distributions import as armoriq_sdk; leaving an editable customer
+        # SDK alongside the public wheel makes provenance and imports ambiguous.
+        subprocess.run(
+            ["uv", "pip", "uninstall", "--python", python, "armoriq-sdk", "armoriq-sdk-dev"],
+            check=True,
+        )
         subprocess.run(
             ["uv", "pip", "install", "--python", python, *package, "python-dotenv>=1,<2"],
             check=True,

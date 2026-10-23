@@ -24,7 +24,7 @@ from ..session import utc_now
 from ..settings import load_environment, model_identity, protection_identity, resolve_adapter
 from .common import json_native, load_symbol, source_identity
 from .environments import create_environment, derived_scores
-from .models import BenchmarkConfig, BenchmarkResult, NativeEpisode
+from .models import BenchmarkConfig, BenchmarkResult, NativeEpisode, StateResetReceipt
 from .registry import SOURCES
 from .store import BenchmarkStore
 
@@ -72,6 +72,7 @@ def manifest_for(config):
     for reference in [
         config.agent.factory,
         config.environment_factory,
+        config.state_reset_factory,
         config.action_mapper,
         config.plan_factory,
         config.options.get("attack_factory"),
@@ -155,6 +156,14 @@ async def run_episode(config, task_id, repeat, stop):
         if stop.is_set():
             episode.status = "cancelled"
             return episode
+        if config.state_reset_factory:
+            # Restore external state before creating the native task or spending model tokens.
+            # No condition/mode is passed: the same snapshot must serve every condition.
+            reset = load_symbol(config.state_reset_factory)
+            receipt = await native_call(
+                partial(reset, task_id=task_id, seed=seed, options=copy.deepcopy(config.options))
+            )
+            episode.state_reset = StateResetReceipt.model_validate(receipt)
         env = await native_call(create_environment, config, task_id, seed)
         resolved_agent = resolve_adapter(config.agent)
         agent = (
@@ -225,7 +234,7 @@ async def run_episode(config, task_id, repeat, stop):
                 }
             )
             # Successful capture is not extra model feedback in the guarded condition.
-            if plan_decision.action != "allow":
+            if config.mode == "enforce" and plan_decision.action != "allow":
                 feedback = plan_decision.model_dump()
             if config.mode == "enforce" and plan_decision.action != "allow":
                 episode.native_scores = json_native(await native_call(env.grade))

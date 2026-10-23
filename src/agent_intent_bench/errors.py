@@ -7,6 +7,7 @@ def safe_error(error: Exception, config: RunConfig | None = None) -> str:
     message = f"{type(error).__name__}: {error}"
     names = {
         "ARMORIQ_API_KEY",
+        "ARMORIQ_ACCESS_TOKEN",
         "OPENAI_API_KEY",
         "MODEL_API_KEY",
         "ANTHROPIC_API_KEY",

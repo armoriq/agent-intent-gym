@@ -7,6 +7,7 @@ Explicit fixture credentials and mock endpoints; no request reaches an ArmorIQ s
 import asyncio
 import json
 import os
+from contextlib import nullcontext
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -20,7 +21,14 @@ async def main():
     os.environ["INTENTBENCH_SDK_TEST_KEY"] = "ak_test_offline_contract"
     # Constructor authentication must also stay offline, before HTTP transport
     # replacement. The real session/enforcement code is exercised below.
-    with patch("armoriq_sdk.ArmorIQClient._validate_api_key", return_value=None):
+    from armoriq_sdk import ArmorIQClient
+
+    authentication = (
+        patch("armoriq_sdk.ArmorIQClient._validate_api_key", return_value=None)
+        if hasattr(ArmorIQClient, "_validate_api_key")
+        else nullcontext()
+    )
+    with authentication:
         guard = ArmorIQGuard(
             AdapterConfig(
                 kind="armoriq",
@@ -55,7 +63,12 @@ async def main():
     guard.client.http_client = httpx.Client(transport=httpx.MockTransport(transport))
     guard.client.capture_plan = lambda *args, **kwargs: SimpleNamespace()
     guard.client.get_intent_token = lambda *args, **kwargs: SimpleNamespace(
-        is_expired=False, raw_token={"fixture": True}, policy_snapshot=[], policy_validation={}
+        is_expired=False,
+        raw_token={"fixture": True},
+        policy_snapshot=[],
+        policy_validation={},
+        plan_id="offline-plan",
+        signed=lambda: {"plan_id": "offline-plan"},
     )
     context = {"intent": Intent(id="native-test", objective="Pay Acme").model_dump()}
     await guard.evaluate(

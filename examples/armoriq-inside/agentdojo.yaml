@@ -22,6 +22,9 @@ guard:
     mcp_name: intentbench
     timeout: 15
     validity_seconds: 600
+    agent_id: intentbench-v2-agentdojo
+    require_active_policy: true
+    tool_name_mode: agent
 guard_responses: true
 instrumentation: inside
 max_steps: 24

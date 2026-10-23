@@ -14,6 +14,7 @@ class BenchmarkConfig(Model):
     agent: AdapterConfig
     options: dict[str, Any] = Field(default_factory=dict)
     environment_factory: str | None = None
+    state_reset_factory: str | None = None
     guard: AdapterConfig | None = None
     contract: Intent | None = None
     action_mapper: str | None = None
@@ -65,6 +66,11 @@ class BenchmarkConfig(Model):
         return self
 
 
+class StateResetReceipt(Model):
+    snapshot_id: str = Field(min_length=1)
+    method: str = Field(min_length=1)
+
+
 class NativeEpisode(Model):
     id: str
     task_id: str
@@ -75,6 +81,7 @@ class NativeEpisode(Model):
     native_scores: dict[str, Any] = Field(default_factory=dict)
     native_sources: list[dict[str, Any]] = Field(default_factory=list)
     native_setup: dict[str, Any] = Field(default_factory=dict)
+    state_reset: StateResetReceipt | None = None
     derived_scores: dict[str, Any] = Field(default_factory=dict)
     guard_decisions: dict[str, int] = Field(default_factory=dict)
     transitions: list[dict[str, Any]] = Field(default_factory=list)

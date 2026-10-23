@@ -19,6 +19,10 @@ class ArmorIQInsideAgent:
         result = self.agent.act(copy.deepcopy(observation))
         return await result if inspect.isawaitable(result) else result
 
+    @property
+    def usage(self):
+        return getattr(self.agent, "usage", {})
+
     async def evaluate(self, action, context):
         return await self.guard.evaluate(copy.deepcopy(action), copy.deepcopy(context))
 
