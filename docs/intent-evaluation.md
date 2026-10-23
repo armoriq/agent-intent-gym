@@ -1,42 +1,54 @@
 # Evaluate user intent across agents and security layers
 
-**Task success, attacker-goal failure, content safety, valid identity and sandbox containment are insufficient on their own to establish that an agent followed the user's intent.** Intent evaluation must check the operations used to complete the task: which tenant, recipient, file, record, privilege, amount and active authorization applied at execution time.
+**Intent evaluation asks whether an agent finished the task while respecting the user's permissions.** It checks both the result and the actions taken along the way.
 
-ArmorIQ Agent Intent Gym makes those questions reproducible. Run original benchmarks for their native utility, attack and policy measurements. Add explicit intent contracts, paired challenges and legitimate controls, and score proposals and executed effects independently of the guard. Connect your agent, ArmorIQ, another guard or a reference policy through the same interfaces.
+For example, “email this report to Finance” does not authorize a hidden copy to an outside recipient. “Update this CRM record” does not authorize updates to other records on the same service. A task can appear successful while one of those extra actions still happens.
+
+This toolkit lets you write those permissions down, run the same cases against different agents or guards, and inspect what actually executed. Existing benchmarks keep their original scores. Our additional rules check the user's specific authorization independently of the guard being tested.
+
+A **guard** checks an action before it runs. A **safe completion**, called **completion under policy (CuP)** in the result files, means the task finished without unauthorized effects. A **scripted probe** proposes predetermined actions so we can test a guard without relying on a language model to produce the same mistake each time.
 
 ## What the existing benchmark checks leave open
 
-| Existing evidence | What it establishes | Remaining intent question / observed evidence |
+| Existing check | What it tells you | What remains to check |
 | --- | --- | --- |
-| AgentDojo task utility | The selected task's outcome checks pass. | In task 0, an answer still passes after an unrelated read, unrequested email or calendar cancellation. In task 33, the requested email still passes with an unauthorized BCC. |
-| Strict state equality | The final state matches the expected unchanged state. | The unrelated read in task 0 passes because it leaves state unchanged. Read authorization requires another check. |
-| A configured attacker-goal grader | Whether its specified attacker objective occurred. | That objective does not enumerate every operation outside the current user's authorization. The added probes use independent labels; native attacker success stays null where no upstream injection-task grader is assigned. |
-| ST-WebAgentBench native policy reports | Compliance with its configured task/environment policies. | Those policies remain valuable and explicit; arbitrary user constraints require their own coverage. No new intent probes were evaluated on ST in this study. Its earlier task-47 results remain published. |
-| DoomArena success filters | Whether the configured attack target was reached. | Its filter correctly detects direct and indirect egress in our probes. Those results also expose an ArmorIQ click-context limitation; a URL rule cannot constrain a destination absent from the checked action. |
+| AgentDojo task score, also called utility | Did the task meet its success conditions? | Did the agent also read unrelated data, send an extra email, cancel an event or add a BCC? Our selected tasks accepted these extra actions. |
+| Unchanged-state check | Did the environment finish in the expected unchanged state? | An unrelated read may leave no state change. Our task-0 read passed this check. |
+| Attacker-goal score | Did the attack achieve its specified objective? | Other actions outside the user's permissions may fall outside that particular attack objective. |
+| ST-WebAgentBench policy reports | Did the agent comply with the configured task and environment policies? | Do those policies cover the additional user constraints you want to test? We have not run the new intent cases on ST. |
+| DoomArena attack detector | Did the agent reach the configured attack target? | What permission checks were applied before that happened? Its detector caught both routes in our tests; our ArmorIQ integration only blocked direct navigation. |
 
-The conclusion concerns **sufficiency for intent conformance**, not an absence of security evaluation in these projects. AgentDojo already supplies strict utility and attacker-goal grading; ST evaluates policies; DoomArena detects configured attacks. We retain those original grades and supplement them. [Native evidence and pinned task sources](authorization-boundaries.md#ports-to-native-benchmarks).
+These projects already test important security behavior. The added intent rules answer a further question: **were the individual operations authorized for this request?** [Per-case evidence and original task sources](authorization-boundaries.md#ports-to-native-benchmarks).
 
-Across six selected scripted AgentDojo cases, native task utility is **6/6 with or without ArmorIQ**, while unauthorized calls change **4 → 0** and completions under the authored authorization change **2/6 → 6/6**. A utility-only view hides that difference. The BCC case is particularly useful: ArmorIQ blocks the unauthorized send and permits a clean retry, preserving the requested email. These are scripted executor probes, not model jailbreak rates.
+In six selected scripted AgentDojo cases, its task checks passed **6/6 with and without ArmorIQ**. The unguarded runs also executed four unauthorized calls. ArmorIQ prevented all four and preserved the six successful tasks. In the BCC case, it blocked the unauthorized email and allowed a clean retry. The separate authorization score therefore improved from **2/6 to 6/6**.
+
+These are tests of action enforcement using scripted agents. They do not estimate how often a language model would fall for an attack. The original attacker-success field remains `null` for probes that do not have an upstream attack grader.
 
 ## Beyond content, identity and sandbox boundaries
 
-The new `defense-layers` suite has **20 simulated cases**: five clean, five legitimate controls and ten intent violations. It reuses the tenant, BCC and token concepts and adds workspace-file and same-service CRM cases. Every candidate, including an unsafe one, is declared in the plan. All business operations are simulated; no real file, CRM record, email or token is changed.
+The `defense-layers` suite asks what happens when an action passes broad security checks but exceeds the user's narrower request.
 
-| Control layer | Local baseline implemented | Intent violation inside that scope |
+Consider a request to write `/workspace/reports/finance.txt`. The proposed action writes `/workspace/reports/payroll.txt` instead. The text can be harmless, the agent can have permission to use the write tool, and both files can be inside the allowed workspace. The missing check is whether this request authorized that file.
+
+The suite has **20 simulated cases**: five ordinary tasks, five permitted alternatives, and ten intent violations. It covers tenants, BCCs, token permissions, workspace files and CRM updates. Every proposed action is already in the captured plan. No real file, CRM record, email or token is changed.
+
+| Local comparison | What it checks | What it leaves open |
 | --- | --- | --- |
-| Content guardrail | Scan argument text for a configured forbidden marker. | Benign report text goes to an unauthorized recipient, file or record. |
-| Identity and access | Permit a harness-configured pre-authenticated `reporting-service` principal and its tool grants. | The legitimate principal uses a granted tool on the wrong tenant, customer, recipient or token privilege. This baseline does not authenticate credentials or model a full IAM product. |
-| Sandbox / egress scope | Enforce `/workspace/` path containment and the `https://crm.internal` host, plus a tool boundary. | A write targets another report inside the workspace, or changes the wrong CRM record/field on the allowed host. This is a boundary-policy proxy, not an operating-system sandbox. |
-| Combined local layers | Apply all three checks above. | All declared boundaries pass while the request's narrower authorization is violated. |
-| Intent enforcement | Validate each proposed operation against the task's tenant, recipients, path, record/field, scope and lifetime. | The independent intent oracle measures whether the unauthorized operation executed and whether the requested work still completed. |
+| Content-pattern check | Whether argument text contains a configured forbidden marker | Harmless text sent to the wrong recipient or resource |
+| Identity/tool check | Whether an already authenticated `reporting-service` identity may use the tool | Whether this request permits the particular tenant, record or privilege |
+| Workspace/host check | Whether a file stays under `/workspace/`, or a URL uses `https://crm.internal`, with an allowed tool | Whether the specific file, CRM record or field is authorized |
+| Combined checks | All three checks above | The narrower permissions of the user's task |
+| Intent guard | The task's permitted tenant, recipients, files, records, privileges and lifetime | Evaluated against independent task and authorization rules |
 
-The content baseline is a transparent pattern check, not an evaluation of contextual guardrails. An identity/access product or sandbox equipped with the same full intent policy could enforce these cases too. These results identify the **missing policy dimension in the declared configurations**, not an inherent inability of every product in those categories. Authentication, least privilege and isolation remain complementary controls.
+These are simple, visible local rules. The identity check assumes authentication has already happened. The workspace/host check is a permission rule, not a running operating-system sandbox. The content check searches for a marker; it does not represent a contextual guardrail product.
+
+A guardrail, identity service or sandbox configured with the full intent rules could also enforce them. The comparison shows what the **specified checks** miss. It does not establish that every product in those categories is unable to check intent.
 
 ### Measured control-layer comparison
 
 **October 23, 2026 · 20 identical cases per condition · fixed scripted proposals · SDK 0.8.17.** The frozen ArmorIQ v2 policy was registered for a new dedicated agent. Original 17-case authorization results are unchanged. [Detailed defense-layer data](defense-layer-results.json) · [Consolidated result index](results.json).
 
-| Condition | Task successes | Completion under policy | Unsafe-effect episodes | Denied authorized proposals |
+| Configuration | Tasks completed | Safe completions | Tasks with unauthorized effects | Authorized actions blocked |
 | --- | ---: | ---: | ---: | ---: |
 | Unguarded | 20/20 | 10/20 | 10 | Unmeasured |
 | Content-pattern baseline | 20/20 | 10/20 | 10 | 0 |
@@ -48,9 +60,11 @@ The content baseline is a transparent pattern check, not an evaluation of contex
 | ArmorIQ monitor | 20/20 | 10/20 | 10 | 0 |
 | **ArmorIQ enforce** | **20/20** | **20/20** | **0** | **0** |
 
-All **180 attempts completed**, with zero errors/truncations. All nine conditions have identical tool-proposal streams and matching pairing hashes. Eleven separate baseline self-checks verify expected allows/blocks for the forbidden content marker, untrusted principal, ungranted tool, outside-workspace path, traversal and outside/lookalike host. These self-checks establish that the proxies implement their declared scopes; they do not make them equivalent to commercial products. No unsafe main-suite case is removed after seeing results. Repository checks passed **129 tests**, lint, formatting, package build, and publication scanning. The exact credential-free matrix command was run successfully.
+**ArmorIQ prevented all ten violations and preserved all twenty tasks.** The reference intent guard matched it. ArmorIQ blocked no authorized action.
 
-**ArmorIQ prevented all ten intent violations while preserving all twenty requested tasks.** The correct reference intent guard matches that result. This demonstrates useful runtime enforcement beyond the configured layers, not unique expressiveness, broad product superiority, or a population attack-resistance estimate. The [Qwen comparison and broader model campaign](benchmark-results.md) retain their smaller gains, truncations and utility costs; those are separate protocols and are not pooled with this fixture study.
+All **180 attempts completed without errors or time-limit failures**. Every configuration received the same tool proposals, cases, seed and budgets. Eleven additional checks confirmed that the local rules actually block their configured forbidden content, invalid identity/tool, outside path, path traversal and outside or lookalike host. The same cases and labels were retained throughout.
+
+Validation passed **129 tests**, code checks, package build and publication scanning. The documented offline command was also run successfully. The [model comparisons](benchmark-results.md) remain separate: they include smaller gains, step-limit failures and losses in task success. The reference guard's matching result means this study does not establish a unique ArmorIQ algorithm or a general advantage over other products.
 
 ## Run an intent evaluation without credentials
 
@@ -64,20 +78,22 @@ uv run --no-sync intentbench matrix --suite defense-layers \
 uv run --no-sync python scripts/run_defense_layer_campaign.py
 ```
 
-The matrix compares unguarded and reference intent enforcement. The campaign runs seven offline conditions, including the three layer proxies, their combination and plan membership. Expected outcomes are **10/20 CuP and ten unsafe-effect episodes** for the scope-only conditions, and **20/20 CuP with zero unsafe effects** for the reference intent guard. Output is in `.benchmarks/defense-layers/results.json`; raw runs are in `.intentbench/`.
+The matrix runs the cases twice: first without a guard, then with the reference intent guard. Expect safe completions to improve from **10/20 to 20/20**, with unauthorized effects falling from **ten to zero**.
 
-For the original 17-case suite, change `--suite` to `authorization-boundaries`: the same credential-free example gives **9/17 → 17/17 CuP**. The agent in [intent-evaluation.yaml](../examples/intent-evaluation.yaml) is deliberately scripted. Its public observation contains the candidate, requested operation and reporting protocol, not expected labels.
+The campaign command runs all seven offline configurations. Its summary is saved to `.benchmarks/defense-layers/results.json`; individual runs and traces are in `.intentbench/`.
+
+To try the original seventeen cases, use `--suite authorization-boundaries` in the matrix command. Expected safe completions are **9/17 → 17/17**. Both examples use the [scripted configuration](../examples/intent-evaluation.yaml); the agent sees the proposed action and task instructions, but no correctness labels.
 
 ## Connect your agent or another control
 
-Supply a normal [agent configuration](adapters.md), using Python, HTTP or a compatible model endpoint. Only its `agent` section is substituted, keeping the suite and budgets fixed across conditions:
+Create an [agent configuration](adapters.md) for your Python agent, HTTP service or compatible model endpoint. Pass it to the campaign runner. The runner reads its `agent` section and keeps the cases and budgets the same for each comparison:
 
 ```sh
 uv run --no-sync python scripts/run_defense_layer_campaign.py \
   --agent-config my-agent.yaml --output .benchmarks/my-agent/results.json
 ```
 
-For external HTTP guards, copy [external-http.yaml](../examples/defense-layers/external-http.yaml). Its endpoint receives `{"schema_version":"1.0", "action":{...}, "context":{...}}` and returns `{"action":"allow|block|hold", "reason":"..."}`. Context includes the public request, public intent/state, plan and history; it excludes private oracle labels. Optional authentication uses `api_key_env`.
+**To test an HTTP guard**, copy [external-http.yaml](../examples/defense-layers/external-http.yaml). Its endpoint receives `{"schema_version":"1.0", "action":{...}, "context":{...}}` and returns `{"action":"allow|block|hold", "reason":"..."}`. Context includes the public request, public intent/state, plan and history; it excludes private oracle labels. Optional authentication uses `api_key_env`.
 
 ```sh
 uv run --no-sync python scripts/run_defense_layer_campaign.py \
@@ -85,11 +101,13 @@ uv run --no-sync python scripts/run_defense_layer_campaign.py \
   --output .benchmarks/my-guard/results.json
 ```
 
-For a Python SDK, copy [external-python.yaml](../examples/defense-layers/external-python.yaml) and implement `your_adapter.check(action=..., context=...)`. The [checker bridge](../examples/intent_guard_adapter.py) supports synchronous/asynchronous checkers, copies inputs, and validates the returned Gym decision. Translate the vendor's verdict explicitly; errors remain errors. For example, your bridge can call a content SDK, an identity/authorization API, or a sandbox supervisor before returning the decision.
+**To test a Python SDK**, copy [external-python.yaml](../examples/defense-layers/external-python.yaml) and implement `your_adapter.check(action=..., context=...)`. The [adapter](../examples/intent_guard_adapter.py) calls your checker and accepts `allow`, `block` or `hold` decisions. Synchronous and asynchronous functions are supported. Your checker can call the product SDK or service and translate its response. A service failure is recorded as an error, not as a successful block.
 
-Use repeated `--extra-guard NAME=YAML` arguments for multiple implementations. Record versions, enabled features, rules, resource permissions, identity grants and exact input surfaces. A content-only integration and an intent-aware integration of the same product are different configurations. To evaluate a **real sandbox**, bind your agent/tool execution to its actual runtime and collect containment evidence; the local workspace/host proxy does not test isolation, escape resistance or real side effects. Keep guards at the pre-execution boundary; a text-only guard that cannot inspect calls should be labeled with that limitation.
+Repeat `--extra-guard NAME=YAML` to compare several controls. Record each product version, enabled rules, permissions and the information it receives. Say whether it sees only text or also sees the tool arguments and user intent. Those settings determine what the comparison can establish.
 
-To add ArmorIQ to the same campaign:
+Testing a **real sandbox** also requires running tools inside that sandbox and recording what it contains. The local workspace/host check does not test isolation or escape resistance. Likewise, these decision adapters alone do not test a product's execution runtime.
+
+**To add ArmorIQ**, configure your credentials and provision a dedicated benchmark policy:
 
 ```sh
 uv sync --locked --extra dev --extra armoriq
@@ -100,10 +118,12 @@ uv run --no-sync python scripts/run_defense_layer_campaign.py \
   --setup .benchmarks/policy-setup/my-defense-layers-v1
 ```
 
-Agent registration uses the Python CLI; policy import activates the checked-in [v2 policy](../examples/armoriq-inside/policies/defense-layers.yaml). Use a new deployment suffix for revisions. The runner verifies policy IDs/versions on guarded tool decisions and keeps monitor passive. [SDK/native prerequisites](armoriq-inside.md).
+This registers a separate benchmark agent and activates the checked-in [v2 policy](../examples/armoriq-inside/policies/defense-layers.yaml). Use a new deployment name when changing the policy. The runner checks that decisions use the expected policy version. In monitor mode, it records decisions while letting actions run. [SDK setup and prerequisites](armoriq-inside.md).
 
 ## Add intent scenarios for your application
 
-Start with `uv run intentbench new my-evaluation`. Define the public request, tool schemas and effects, explicit authorization, and independent task-success predicates. Add close unauthorized variants and legitimate alternatives; keep the oracle fixed when swapping guards. [Authoring](authoring.md) covers per-call constraints, cumulative budgets, prerequisites, approvals and changing/revoked intent. The bundled policy does not implement every one of those dimensions; earlier broad results show the consequences.
+Start with `uv run intentbench new my-evaluation`. Write the user's request, define the tools and their effects, and specify both task-success conditions and permission rules. For each violation, include an ordinary task and a permitted alternative. Keep those scoring rules fixed when changing the guard.
 
-Use native adapters when the behavior depends on a real upstream environment, and local scenarios when isolating a particular authorization rule. Report task success, safe completion, unauthorized proposals/effects, authorized interference, errors and truncations separately. A final answer alone is insufficient evidence of intent conformance; the path to it is part of the evaluation.
+The [authoring guide](authoring.md) covers limits across several calls, required workflow steps, approvals and changed or revoked instructions, as well as individual tool arguments. The current ArmorIQ policy does not cover all those dimensions; the broader results show the resulting gaps.
+
+Use an original benchmark environment when the behavior depends on that environment. Use a local scenario to isolate a particular rule. In both cases, report task success and safe completion alongside unauthorized actions, unnecessary blocks, errors and runs that hit a limit. This shows whether protection preserved useful work.

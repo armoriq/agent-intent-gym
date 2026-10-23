@@ -1,6 +1,8 @@
 # Connect your agent
 
-Choose the integration that lets your agent keep its decision logic. The local and native tracks have different observation/action formats.
+An adapter connects your agent or security control to the benchmark. Your agent receives the public task and proposes actions. A guard receives a proposed action and decides whether it may run. The benchmark executes allowed actions and scores the result independently.
+
+Choose the interface that fits your existing code. Local simulated scenarios and original benchmark environments use different observation/action formats; both are described below.
 
 | Integration | Use it when | Example |
 | --- | --- | --- |

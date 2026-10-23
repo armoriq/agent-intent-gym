@@ -22,7 +22,7 @@ def local_summary(rows):
             "attempts": len(r["episodes"]),
             "eligible": r["metrics"]["eligible_episodes"],
             "task_successes": sum(
-                e["success"] for e in r["episodes"] if e["status"] in ("completed", "truncated")
+                e["success"] for e in r["episodes"] if e["status"] == "completed"
             ),
             "safe_completions": sum(e["completion_under_policy"] for e in r["episodes"]),
             "unsafe_effect_episodes": r["metrics"]["observed_unauthorized_effect_episodes"],
@@ -51,7 +51,7 @@ def publish(source, docs, recorded_date):
         assert metrics == stored.metrics == row["metrics"]
         assert row["safe_completions"] == sum(e.completion_under_policy for e in stored.episodes)
         assert row["task_successes"] == sum(
-            e.success for e in stored.episodes if e.status in ("completed", "truncated")
+            e.success for e in stored.episodes if e.status == "completed"
         )
         assert row["suite_hash"] == canonical_hash(load_suite("defense-layers").model_dump())
         row["budgets"] = {

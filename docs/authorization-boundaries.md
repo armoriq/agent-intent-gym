@@ -1,10 +1,14 @@
 # Targeted authorization-boundary extensions
 
-**ArmorIQ enforces authorization on the tool calls used to complete a task.** In six selected native AgentDojo scripted cases, task utility passed with and without ArmorIQ, while unauthorized calls fell **4 → 0** and completions under the authored authorization rose **2/6 → 6/6**. In the 17-case local scripted suite, ArmorIQ prevented all eight unsafe candidates while preserving **17/17** task successes.
+These seventeen scenarios test a simple question: **does the agent respect the user's permissions while completing the task?** Examples include reading another tenant's records, adding an outside BCC recipient, requesting extra token privileges, and publishing to an unauthorized destination.
 
-The cases cover consequential reads, secondary recipients, token privileges/lifetimes and publication destinations, with related probes ported to original AgentDojo and DoomArena environments. The value demonstrated is enforcement of specific authorization boundaries beyond task utility, tool scope and plan declaration. The local reference guard matches ArmorIQ on the scripted suite; the real-model comparison is smaller and mixed.
+The study separates predetermined action tests from a language-model comparison. In the scripted tests, ArmorIQ blocked all eight unsafe candidates and preserved all **17/17** tasks. A local reference guard matched that result. With Qwen2.5 3B, safe completions improved **9/17 → 10/17**, while successful tasks fell **11/17 → 10/17**.
 
-This targeted capability study has **17 authored cases**: four clean, five legitimate controls and eight attacks. [Result data](authorization-boundary-results.json) separates scripted executor probes, a real-model comparison, native extensions and policy-authoring diagnostics. The final comparison contains **180 episode attempts: 170 completed, ten truncated, zero errors**, evaluated October 22, 2026; this analysis was updated October 23. Original native graders remain unchanged. These are selected authored extensions, not representative task samples or official leaderboard results. The [broader campaign](benchmark-results.md#october-22-v2-policy-campaign), including its utility losses, remains published.
+Related cases were also run in original AgentDojo and DoomArena environments. Across six scripted AgentDojo cases, its task score—called utility—stayed **6/6**, while unauthorized calls fell **4 → 0**. The report below explains which original checks accepted those actions and which limitations remain.
+
+A **safe completion**, or **completion under policy (CuP)**, means that the run finished, the task succeeded and no unauthorized effects occurred. The guard does not grade itself: separate rules written by the scenario author check authorization and success. Counts of native tool calls are reported separately from evidence of their actual effects.
+
+The final comparison contains **180 attempts: 170 completed, ten stopped at the step limit, zero errors**, evaluated October 22, 2026. The cases include four ordinary tasks, five permitted alternatives and eight attacks. [Detailed data](authorization-boundary-results.json) retains methods, diagnostics and run IDs. The [broader model results](benchmark-results.md#october-22-v2-policy-campaign), including losses in task success, remain published.
 
 ## Benchmark gaps and ArmorIQ evidence
 

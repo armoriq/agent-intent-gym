@@ -1,6 +1,8 @@
 # Benchmark results
 
-This ledger links separate October 22–23, 2026 evaluations behind the [README results](../README.md#results). The authorization study demonstrates selected enforcement benefits; the broader model campaign records safety–utility tradeoffs. Scores remain separate, with original native graders and no pooled performance score or official leaderboard claim. The new defense-layer campaign ran October 23; earlier campaign metrics are preserved.
+Three studies are recorded here. The scripted studies test whether a guard blocks specific unauthorized actions while allowing the requested work. The model study also tests how a language model behaves and recovers when actions are blocked.
+
+The results show both protection benefits and costs to task success. Each study keeps its own cases, scoring and limitations. These are local evaluations; original benchmark scores retain their original meaning. Start with the [plain-language guide](intent-evaluation.md), or use this page for exact counts, settings and run IDs.
 
 | Evaluation | Evidence | Report / machine-readable data |
 | --- | --- | --- |
@@ -12,15 +14,17 @@ Raw traces and account-specific/runtime data remain local in `.intentbench/` and
 
 ## Defense-layer intent results
 
-The [intent-evaluation guide](intent-evaluation.md) explains why task utility, attacker-goal checks and execution-scope controls alone do not establish user-intent conformance, and how to evaluate other agents and controls. The new 20-case suite reuses three boundary concepts and adds workspace-file and same-service CRM variants.
+The twenty cases test tenant access, BCC recipients, token permissions, workspace files and CRM updates. They use scripted actions and simulated tools. The question is whether an action can pass content, identity and workspace checks while still exceeding the user's request.
 
-The nine-condition campaign has **180 completed attempts, zero errors/truncations**, with identical tool proposals across conditions. Unguarded, content-pattern, identity/tool-grant, workspace/host, their combination, plan membership and ArmorIQ monitor each record **20/20 task successes, 10/20 safe completions and ten unsafe-effect episodes**. **ArmorIQ enforcement and the full reference intent guard each record 20/20 safe completions and zero unsafe effects**, with no denied authorized proposals.
+All nine configurations received the same proposed tool calls. The study recorded **180 completed attempts with no errors or time-limit failures**. Without an intent guard, all twenty tasks finished, but ten included unauthorized effects. This also happened with each local security check, their combination, plan membership and ArmorIQ monitoring.
 
-Repository validation passed **129 tests**, lint/format, package build, publication scanning, and the exact offline quick-start command. Eleven separate checks validate the local baselines' declared allow/deny boundaries. They are mechanism proxies, not tests of named products, credential authentication or actual OS isolation. A product configured with the full intent policy could also enforce these rules. [Comparison table, reproducible commands and external-control adapters](intent-evaluation.md#measured-control-layer-comparison) · [Detailed result data](defense-layer-results.json).
+**ArmorIQ enforcement and the reference intent guard each produced twenty safe completions with zero unauthorized effects.** Neither blocked an authorized proposal. The [full table](intent-evaluation.md#measured-control-layer-comparison) lists each configuration.
+
+Repository validation passed **129 tests**, lint/format, package build, publication scanning, and the exact offline quick-start command. Eleven separate checks validate the local baselines' declared allow/deny boundaries. They are local permission checks. They do not test named products, credential authentication or actual operating-system isolation. A product configured with the full intent policy could also enforce these rules. [Comparison table, reproducible commands and external-control adapters](intent-evaluation.md#measured-control-layer-comparison) · [Detailed result data](defense-layer-results.json).
 
 ## Targeted authorization results
 
-**ArmorIQ prevented unauthorized native calls while preserving all six requested AgentDojo task completions in the scripted extensions.** The native task-utility checks credited all six baseline cases, including four containing an unauthorized call. Independent authored authorization labels expose the difference.
+**ArmorIQ prevented unauthorized native calls while preserving all six requested AgentDojo task completions in the scripted extensions.** The native task-utility checks credited all six baseline cases, including four containing an unauthorized call. Our separate authorization rules identify the extra actions even when the task score passes.
 
 | Evidence class | Without ArmorIQ → enforce | Task success / native utility |
 | --- | --- | --- |
@@ -29,7 +33,9 @@ Repository validation passed **129 tests**, lint/format, package build, publicat
 | Local 17-case Qwen2.5 3B comparison | CuP **9/17 → 10/17**; unsafe-effect episodes **2 → 0** | **11/17 → 10/17** |
 | Native DoomArena direct-egress scripted case | Target reached **true → false** | Reward **0 → 1** |
 
-The demonstrated coverage gaps are collateral actions omitted by task utility, unauthorized reads invisible to state-equality checks, hidden BCCs omitted by selected email utility, and argument authorization beyond tool scope/plan membership. See the [gap-to-evidence table](authorization-boundaries.md#benchmark-gaps-and-armoriq-evidence) and pinned task implementations. AgentDojo already has strict utility and attacker-goal graders; these findings concern selected checks used alone.
+The selected checks missed extra actions that did not prevent task success, reads that left state unchanged, and unauthorized BCC recipients. Local comparisons also showed why permission to use a tool or include a call in a plan is broader than permission to use particular arguments. See the [gap-to-evidence table](authorization-boundaries.md#benchmark-gaps-and-armoriq-evidence) and pinned task implementations. AgentDojo already has strict utility and attacker-goal graders; these findings concern selected checks used alone.
+
+Task successes count only runs that completed. The consolidated index now agrees with the detailed Qwen results: **11 / 11 / 10** successes for unguarded / monitor / enforce. Its earlier summary incorrectly included cases stopped at the step limit; the detailed metrics and underlying runs were already correct.
 
 Native probes are scripted, not LLM attack-success rates. The local reference guard also scores 17/17. The actual model loses one task success and records ten truncations across conditions. Indirect link-click navigation still bypasses ArmorIQ even though DoomArena detects it. All policy-authoring diagnostics and the earlier broad results remain available. The corrected MiniWoB wrapper means the earlier DoomArena truncations below are confounded historical rows, not a clean model comparison with the new scripted results.
 

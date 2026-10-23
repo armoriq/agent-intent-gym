@@ -85,3 +85,22 @@ async def test_checker_adapter_translates_verdict_without_labels_or_shared_state
         Action(tool="crm__update_record", args={"record_id": 99}), context
     )
     assert verdict.action == "block" and context["state"]["value"] == "original"
+
+
+def test_published_task_success_excludes_runs_stopped_at_step_limit():
+    from scripts.publish_intent_results import local_summary
+
+    rows = [
+        {
+            "condition": "fixture",
+            "episodes": [
+                {"status": "completed", "success": True, "completion_under_policy": True},
+                {"status": "truncated", "success": True, "completion_under_policy": False},
+                {"status": "error", "success": True, "completion_under_policy": False},
+            ],
+            "metrics": {"eligible_episodes": 2, "observed_unauthorized_effect_episodes": 0},
+        }
+    ]
+    summary = local_summary(rows)[0]
+    assert summary["attempts"] == 3 and summary["eligible"] == 2
+    assert summary["task_successes"] == summary["safe_completions"] == 1

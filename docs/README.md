@@ -1,20 +1,23 @@
 # Documentation
 
-Start with [why intent evaluation needs explicit contracts, and how to run it](intent-evaluation.md). Then choose the guide for your task.
+Start with the [intent-evaluation guide](intent-evaluation.md). It explains the problem through examples, walks through the results, and shows how to run the comparison yourself.
 
-| I want to… | Read |
+| What you want to do | Start here |
 | --- | --- |
-| Understand benchmark gaps and compare security layers | [Intent evaluation, control-layer results and external adapters](intent-evaluation.md) |
-| Run a suite, use the TUI/browser, or inspect a result | [Running evaluations](running.md) |
-| Connect my agent or keep its existing decision loop | [Agent adapters and session API](adapters.md) |
-| Compare the same agent with and without ArmorIQ | [ArmorIQ setup and troubleshooting](armoriq-inside.md) |
-| Run AgentDojo, ST-WebAgentBench, or DoomArena | [Native benchmarks](benchmarks.md) |
-| Define my own task, tools, policy, and challenges | [Scenario authoring](authoring.md) |
-| Choose evaluation modes and understand the scores | [Evaluation design](evaluation-design.md) |
-| Compare ArmorIQ results, run IDs, and setup differences | [Results ledger](benchmark-results.md) · [consolidated result index](results.json) |
-| Understand benchmark gaps and ArmorIQ enforcement evidence | [Gap analysis and native ports](authorization-boundaries.md#benchmark-gaps-and-armoriq-evidence) · [detailed result data](authorization-boundary-results.json) |
-| Understand execution order and implementation boundaries | [Architecture](architecture.md) |
+| Try the benchmark without credentials | [Offline example](intent-evaluation.md#run-an-intent-evaluation-without-credentials) |
+| Test your agent or another security control | [Agent and guard integrations](intent-evaluation.md#connect-your-agent-or-another-control) |
+| Compare with ArmorIQ | [SDK setup and troubleshooting](armoriq-inside.md) |
+| Understand the findings | [Results overview and exact counts](benchmark-results.md) |
+| See which original benchmark checks accepted extra actions | [AgentDojo and browser examples](authorization-boundaries.md#ports-to-native-benchmarks) |
+| Create tasks and permission rules for your application | [Scenario authoring](authoring.md) |
+| Understand safe completion, errors and other scores | [Evaluation design](evaluation-design.md) |
+| Run, inspect or export results | [Running evaluations](running.md) |
+| Install the original benchmark environments | [AgentDojo, ST-WebAgentBench and DoomArena](benchmarks.md) |
+| Work with the Python/HTTP interfaces | [Adapter reference](adapters.md) |
+| Understand how actions are checked and executed | [Architecture](architecture.md) |
 
-Two tracks share the workbench: **local intent suites** use authored contracts and simulated tools; **native benchmarks** execute upstream environments and retain their graders. The toolkit is ArmorIQ Agent Intent Gym; AgentIntentBench is its reference suite. The import name is `agent_intent_bench`, and the CLI is `intentbench`.
+There are two ways to evaluate behavior. **Local scenarios** use simulated tools to test a permission rule in isolation. **Original benchmark environments** run upstream tools and retain their original task and security scores. Both can record whether the user's specific authorization was respected.
 
-For development checks and contribution conventions, see [CONTRIBUTING.md](../CONTRIBUTING.md).
+Machine-readable evidence is available in the [result index](results.json), [control comparison](defense-layer-results.json), and [seventeen-case authorization study](authorization-boundary-results.json). The reports explain which data belongs to each experiment; their scores are kept separate.
+
+The project is ArmorIQ Agent Intent Gym. Its bundled scenarios are called AgentIntentBench. The Python package is `agent_intent_bench`, and the command is `intentbench`. For development and contribution instructions, see [CONTRIBUTING.md](../CONTRIBUTING.md).

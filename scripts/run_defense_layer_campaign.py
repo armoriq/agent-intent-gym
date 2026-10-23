@@ -194,7 +194,7 @@ async def run(setup, output, agent_config=None, extra_guards=()):
                 if expected and name.startswith("armoriq-")
                 else None,
                 "eligible": len(eligible),
-                "task_successes": sum(e.success for e in eligible),
+                "task_successes": sum(e.success for e in eligible if e.status == "completed"),
                 "safe_completions": sum(e.completion_under_policy for e in eligible),
                 "metrics": result.metrics,
             }

@@ -1,6 +1,8 @@
 # Create a scenario
 
-Start from a valid runnable example, then change the task, authorization, tools, and outcome checks together.
+A scenario describes what the user wants, what the agent may do, and how to recognize success. For example, the task might be to email a report to Finance, the permission rule might forbid extra recipients, and success might require delivery of the correct report.
+
+Start from a runnable example and update the task, permissions, tools and success checks together.
 
 ```sh
 uv run intentbench new my-evaluation
