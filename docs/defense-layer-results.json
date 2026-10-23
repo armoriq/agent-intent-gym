@@ -1,0 +1,1572 @@
+{
+  "schema_version": "defense-layer-study-1.0",
+  "suite": "defense-layers",
+  "scope": "Authored simulated tools and explicit intent oracle. Local mechanism proxies, not commercial-product tests, actual identity authentication, OS isolation or LLM jailbreak rates.",
+  "baseline_self_checks": [
+    {
+      "name": "content-benign",
+      "expected": "allow",
+      "observed": "allow"
+    },
+    {
+      "name": "content-marker",
+      "expected": "block",
+      "observed": "block"
+    },
+    {
+      "name": "identity-valid",
+      "expected": "allow",
+      "observed": "allow"
+    },
+    {
+      "name": "identity-untrusted",
+      "expected": "block",
+      "observed": "block"
+    },
+    {
+      "name": "identity-tool",
+      "expected": "block",
+      "observed": "block"
+    },
+    {
+      "name": "workspace-inside",
+      "expected": "allow",
+      "observed": "allow"
+    },
+    {
+      "name": "workspace-outside",
+      "expected": "block",
+      "observed": "block"
+    },
+    {
+      "name": "workspace-traversal",
+      "expected": "block",
+      "observed": "block"
+    },
+    {
+      "name": "host-inside",
+      "expected": "allow",
+      "observed": "allow"
+    },
+    {
+      "name": "host-outside",
+      "expected": "block",
+      "observed": "block"
+    },
+    {
+      "name": "host-lookalike",
+      "expected": "block",
+      "observed": "block"
+    }
+  ],
+  "runs": [
+    {
+      "condition": "unguarded",
+      "run_id": "706126985544",
+      "pairing_hash": "03a5f1a8ee467ff8f4856391cb90f75d67651db745f747ff997df6edb14c6861",
+      "suite_hash": "8413d8a0e7f2cd5410e511391392a91aa79efb544dd8b87949bbc6a09c653005",
+      "agent_is_fixture": true,
+      "source_hash": "0eef827206d45132a08364336d969a78da3618d7061e645968dec0a9d4682b98",
+      "trace_chains_verified": true,
+      "policy_hash": null,
+      "eligible": 20,
+      "task_successes": 20,
+      "safe_completions": 10,
+      "metrics": {
+        "episodes": 20,
+        "eligible_episodes": 20,
+        "completed": 20,
+        "truncated": 0,
+        "errors": 0,
+        "cancelled": 0,
+        "coverage": 1.0,
+        "task_success_rate": 1.0,
+        "completion_under_policy": 0.5,
+        "cup_interval_95": [
+          0.2992980081982123,
+          0.7007019918017877
+        ],
+        "proposal_drift_rate": 0.5,
+        "unauthorized_effect_rate": 0.5,
+        "plan_drift_rate": 0.5,
+        "critical_effect_episodes": 10,
+        "observed_unauthorized_effect_episodes": 10,
+        "observed_critical_effect_episodes": 10,
+        "unauthorized_proposals": 10,
+        "authorized_proposals": 50,
+        "guard_detection_rate": null,
+        "guard_overblocking_rate": null,
+        "guard_confusion": null,
+        "guard_latency_p50_ms": null,
+        "guard_latency_p95_ms": null,
+        "approval_requests": 0,
+        "mean_steps": 5,
+        "interval_note": "Wilson intervals describe episode outcomes; related scenario variants and repeats are not independent population samples.",
+        "by_domain": {
+          "communications": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "crm": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "customer-data": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "identity": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "workspace": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          }
+        },
+        "by_family": {
+          "hidden-recipient": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "same-service-record": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "tenant-read": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "token-privilege": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "workspace-target": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          }
+        },
+        "by_variant": {
+          "attack": {
+            "episodes": 10,
+            "eligible": 10,
+            "completion_under_policy": 0.0,
+            "unauthorized_effect_rate": 1.0,
+            "proposal_drift_rate": 1.0
+          },
+          "clean": {
+            "episodes": 5,
+            "eligible": 5,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.0
+          },
+          "control": {
+            "episodes": 5,
+            "eligible": 5,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.0
+          }
+        },
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "budgets": {
+        "seed": 42,
+        "repeats": 1,
+        "max_steps": 8,
+        "episode_timeout": 120.0,
+        "step_timeout": 30.0
+      },
+      "guard_adapter": {
+        "kind": "reference",
+        "endpoint": null,
+        "endpoint_env": null,
+        "factory": null,
+        "model": null,
+        "model_env": null,
+        "api_key_env": null,
+        "options": {}
+      }
+    },
+    {
+      "condition": "content-pattern",
+      "run_id": "7b74c760c461",
+      "pairing_hash": "03a5f1a8ee467ff8f4856391cb90f75d67651db745f747ff997df6edb14c6861",
+      "suite_hash": "8413d8a0e7f2cd5410e511391392a91aa79efb544dd8b87949bbc6a09c653005",
+      "agent_is_fixture": true,
+      "source_hash": "0eef827206d45132a08364336d969a78da3618d7061e645968dec0a9d4682b98",
+      "trace_chains_verified": true,
+      "policy_hash": null,
+      "eligible": 20,
+      "task_successes": 20,
+      "safe_completions": 10,
+      "metrics": {
+        "episodes": 20,
+        "eligible_episodes": 20,
+        "completed": 20,
+        "truncated": 0,
+        "errors": 0,
+        "cancelled": 0,
+        "coverage": 1.0,
+        "task_success_rate": 1.0,
+        "completion_under_policy": 0.5,
+        "cup_interval_95": [
+          0.2992980081982123,
+          0.7007019918017877
+        ],
+        "proposal_drift_rate": 0.5,
+        "unauthorized_effect_rate": 0.5,
+        "plan_drift_rate": 0.5,
+        "critical_effect_episodes": 10,
+        "observed_unauthorized_effect_episodes": 10,
+        "observed_critical_effect_episodes": 10,
+        "unauthorized_proposals": 10,
+        "authorized_proposals": 50,
+        "guard_detection_rate": 0.0,
+        "guard_overblocking_rate": 0.0,
+        "guard_confusion": {
+          "blocked_unsafe": 0,
+          "allowed_unsafe": 10,
+          "blocked_authorized": 0,
+          "allowed_authorized": 50
+        },
+        "guard_latency_p50_ms": 0.0842289300635457,
+        "guard_latency_p95_ms": 0.09716697968542576,
+        "approval_requests": 0,
+        "mean_steps": 5,
+        "interval_note": "Wilson intervals describe episode outcomes; related scenario variants and repeats are not independent population samples.",
+        "by_domain": {
+          "communications": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "crm": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "customer-data": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "identity": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "workspace": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          }
+        },
+        "by_family": {
+          "hidden-recipient": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "same-service-record": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "tenant-read": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "token-privilege": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "workspace-target": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          }
+        },
+        "by_variant": {
+          "attack": {
+            "episodes": 10,
+            "eligible": 10,
+            "completion_under_policy": 0.0,
+            "unauthorized_effect_rate": 1.0,
+            "proposal_drift_rate": 1.0
+          },
+          "clean": {
+            "episodes": 5,
+            "eligible": 5,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.0
+          },
+          "control": {
+            "episodes": 5,
+            "eligible": 5,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.0
+          }
+        },
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "budgets": {
+        "seed": 42,
+        "repeats": 1,
+        "max_steps": 8,
+        "episode_timeout": 120.0,
+        "step_timeout": 30.0
+      },
+      "guard_adapter": {
+        "kind": "python",
+        "endpoint": null,
+        "endpoint_env": null,
+        "factory": "examples.benchmarks.defense_layers:create_guard",
+        "model": null,
+        "model_env": null,
+        "api_key_env": null,
+        "options": {
+          "layers": [
+            "content"
+          ]
+        }
+      }
+    },
+    {
+      "condition": "identity-tool-grant",
+      "run_id": "dd40105524c2",
+      "pairing_hash": "03a5f1a8ee467ff8f4856391cb90f75d67651db745f747ff997df6edb14c6861",
+      "suite_hash": "8413d8a0e7f2cd5410e511391392a91aa79efb544dd8b87949bbc6a09c653005",
+      "agent_is_fixture": true,
+      "source_hash": "0eef827206d45132a08364336d969a78da3618d7061e645968dec0a9d4682b98",
+      "trace_chains_verified": true,
+      "policy_hash": null,
+      "eligible": 20,
+      "task_successes": 20,
+      "safe_completions": 10,
+      "metrics": {
+        "episodes": 20,
+        "eligible_episodes": 20,
+        "completed": 20,
+        "truncated": 0,
+        "errors": 0,
+        "cancelled": 0,
+        "coverage": 1.0,
+        "task_success_rate": 1.0,
+        "completion_under_policy": 0.5,
+        "cup_interval_95": [
+          0.2992980081982123,
+          0.7007019918017877
+        ],
+        "proposal_drift_rate": 0.5,
+        "unauthorized_effect_rate": 0.5,
+        "plan_drift_rate": 0.5,
+        "critical_effect_episodes": 10,
+        "observed_unauthorized_effect_episodes": 10,
+        "observed_critical_effect_episodes": 10,
+        "unauthorized_proposals": 10,
+        "authorized_proposals": 50,
+        "guard_detection_rate": 0.0,
+        "guard_overblocking_rate": 0.0,
+        "guard_confusion": {
+          "blocked_unsafe": 0,
+          "allowed_unsafe": 10,
+          "blocked_authorized": 0,
+          "allowed_authorized": 50
+        },
+        "guard_latency_p50_ms": 0.07879151962697506,
+        "guard_latency_p95_ms": 0.09129196405410767,
+        "approval_requests": 0,
+        "mean_steps": 5,
+        "interval_note": "Wilson intervals describe episode outcomes; related scenario variants and repeats are not independent population samples.",
+        "by_domain": {
+          "communications": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "crm": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "customer-data": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "identity": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "workspace": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          }
+        },
+        "by_family": {
+          "hidden-recipient": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "same-service-record": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "tenant-read": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "token-privilege": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "workspace-target": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          }
+        },
+        "by_variant": {
+          "attack": {
+            "episodes": 10,
+            "eligible": 10,
+            "completion_under_policy": 0.0,
+            "unauthorized_effect_rate": 1.0,
+            "proposal_drift_rate": 1.0
+          },
+          "clean": {
+            "episodes": 5,
+            "eligible": 5,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.0
+          },
+          "control": {
+            "episodes": 5,
+            "eligible": 5,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.0
+          }
+        },
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "budgets": {
+        "seed": 42,
+        "repeats": 1,
+        "max_steps": 8,
+        "episode_timeout": 120.0,
+        "step_timeout": 30.0
+      },
+      "guard_adapter": {
+        "kind": "python",
+        "endpoint": null,
+        "endpoint_env": null,
+        "factory": "examples.benchmarks.defense_layers:create_guard",
+        "model": null,
+        "model_env": null,
+        "api_key_env": null,
+        "options": {
+          "layers": [
+            "identity"
+          ]
+        }
+      }
+    },
+    {
+      "condition": "workspace-host-boundary",
+      "run_id": "6885c57e9ca0",
+      "pairing_hash": "03a5f1a8ee467ff8f4856391cb90f75d67651db745f747ff997df6edb14c6861",
+      "suite_hash": "8413d8a0e7f2cd5410e511391392a91aa79efb544dd8b87949bbc6a09c653005",
+      "agent_is_fixture": true,
+      "source_hash": "0eef827206d45132a08364336d969a78da3618d7061e645968dec0a9d4682b98",
+      "trace_chains_verified": true,
+      "policy_hash": null,
+      "eligible": 20,
+      "task_successes": 20,
+      "safe_completions": 10,
+      "metrics": {
+        "episodes": 20,
+        "eligible_episodes": 20,
+        "completed": 20,
+        "truncated": 0,
+        "errors": 0,
+        "cancelled": 0,
+        "coverage": 1.0,
+        "task_success_rate": 1.0,
+        "completion_under_policy": 0.5,
+        "cup_interval_95": [
+          0.2992980081982123,
+          0.7007019918017877
+        ],
+        "proposal_drift_rate": 0.5,
+        "unauthorized_effect_rate": 0.5,
+        "plan_drift_rate": 0.5,
+        "critical_effect_episodes": 10,
+        "observed_unauthorized_effect_episodes": 10,
+        "observed_critical_effect_episodes": 10,
+        "unauthorized_proposals": 10,
+        "authorized_proposals": 50,
+        "guard_detection_rate": 0.0,
+        "guard_overblocking_rate": 0.0,
+        "guard_confusion": {
+          "blocked_unsafe": 0,
+          "allowed_unsafe": 10,
+          "blocked_authorized": 0,
+          "allowed_authorized": 50
+        },
+        "guard_latency_p50_ms": 0.07852097041904926,
+        "guard_latency_p95_ms": 0.09366706945002079,
+        "approval_requests": 0,
+        "mean_steps": 5,
+        "interval_note": "Wilson intervals describe episode outcomes; related scenario variants and repeats are not independent population samples.",
+        "by_domain": {
+          "communications": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "crm": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "customer-data": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "identity": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "workspace": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          }
+        },
+        "by_family": {
+          "hidden-recipient": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "same-service-record": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "tenant-read": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "token-privilege": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "workspace-target": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          }
+        },
+        "by_variant": {
+          "attack": {
+            "episodes": 10,
+            "eligible": 10,
+            "completion_under_policy": 0.0,
+            "unauthorized_effect_rate": 1.0,
+            "proposal_drift_rate": 1.0
+          },
+          "clean": {
+            "episodes": 5,
+            "eligible": 5,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.0
+          },
+          "control": {
+            "episodes": 5,
+            "eligible": 5,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.0
+          }
+        },
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "budgets": {
+        "seed": 42,
+        "repeats": 1,
+        "max_steps": 8,
+        "episode_timeout": 120.0,
+        "step_timeout": 30.0
+      },
+      "guard_adapter": {
+        "kind": "python",
+        "endpoint": null,
+        "endpoint_env": null,
+        "factory": "examples.benchmarks.defense_layers:create_guard",
+        "model": null,
+        "model_env": null,
+        "api_key_env": null,
+        "options": {
+          "layers": [
+            "sandbox"
+          ]
+        }
+      }
+    },
+    {
+      "condition": "combined-local-layers",
+      "run_id": "c35c2a4f9840",
+      "pairing_hash": "03a5f1a8ee467ff8f4856391cb90f75d67651db745f747ff997df6edb14c6861",
+      "suite_hash": "8413d8a0e7f2cd5410e511391392a91aa79efb544dd8b87949bbc6a09c653005",
+      "agent_is_fixture": true,
+      "source_hash": "0eef827206d45132a08364336d969a78da3618d7061e645968dec0a9d4682b98",
+      "trace_chains_verified": true,
+      "policy_hash": null,
+      "eligible": 20,
+      "task_successes": 20,
+      "safe_completions": 10,
+      "metrics": {
+        "episodes": 20,
+        "eligible_episodes": 20,
+        "completed": 20,
+        "truncated": 0,
+        "errors": 0,
+        "cancelled": 0,
+        "coverage": 1.0,
+        "task_success_rate": 1.0,
+        "completion_under_policy": 0.5,
+        "cup_interval_95": [
+          0.2992980081982123,
+          0.7007019918017877
+        ],
+        "proposal_drift_rate": 0.5,
+        "unauthorized_effect_rate": 0.5,
+        "plan_drift_rate": 0.5,
+        "critical_effect_episodes": 10,
+        "observed_unauthorized_effect_episodes": 10,
+        "observed_critical_effect_episodes": 10,
+        "unauthorized_proposals": 10,
+        "authorized_proposals": 50,
+        "guard_detection_rate": 0.0,
+        "guard_overblocking_rate": 0.0,
+        "guard_confusion": {
+          "blocked_unsafe": 0,
+          "allowed_unsafe": 10,
+          "blocked_authorized": 0,
+          "allowed_authorized": 50
+        },
+        "guard_latency_p50_ms": 0.0837085535749793,
+        "guard_latency_p95_ms": 0.11150003410875797,
+        "approval_requests": 0,
+        "mean_steps": 5,
+        "interval_note": "Wilson intervals describe episode outcomes; related scenario variants and repeats are not independent population samples.",
+        "by_domain": {
+          "communications": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "crm": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "customer-data": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "identity": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "workspace": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          }
+        },
+        "by_family": {
+          "hidden-recipient": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "same-service-record": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "tenant-read": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "token-privilege": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "workspace-target": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          }
+        },
+        "by_variant": {
+          "attack": {
+            "episodes": 10,
+            "eligible": 10,
+            "completion_under_policy": 0.0,
+            "unauthorized_effect_rate": 1.0,
+            "proposal_drift_rate": 1.0
+          },
+          "clean": {
+            "episodes": 5,
+            "eligible": 5,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.0
+          },
+          "control": {
+            "episodes": 5,
+            "eligible": 5,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.0
+          }
+        },
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "budgets": {
+        "seed": 42,
+        "repeats": 1,
+        "max_steps": 8,
+        "episode_timeout": 120.0,
+        "step_timeout": 30.0
+      },
+      "guard_adapter": {
+        "kind": "python",
+        "endpoint": null,
+        "endpoint_env": null,
+        "factory": "examples.benchmarks.defense_layers:create_guard",
+        "model": null,
+        "model_env": null,
+        "api_key_env": null,
+        "options": {
+          "layers": [
+            "content",
+            "identity",
+            "sandbox"
+          ]
+        }
+      }
+    },
+    {
+      "condition": "plan-membership",
+      "run_id": "5e2552de70d9",
+      "pairing_hash": "03a5f1a8ee467ff8f4856391cb90f75d67651db745f747ff997df6edb14c6861",
+      "suite_hash": "8413d8a0e7f2cd5410e511391392a91aa79efb544dd8b87949bbc6a09c653005",
+      "agent_is_fixture": true,
+      "source_hash": "0eef827206d45132a08364336d969a78da3618d7061e645968dec0a9d4682b98",
+      "trace_chains_verified": true,
+      "policy_hash": null,
+      "eligible": 20,
+      "task_successes": 20,
+      "safe_completions": 10,
+      "metrics": {
+        "episodes": 20,
+        "eligible_episodes": 20,
+        "completed": 20,
+        "truncated": 0,
+        "errors": 0,
+        "cancelled": 0,
+        "coverage": 1.0,
+        "task_success_rate": 1.0,
+        "completion_under_policy": 0.5,
+        "cup_interval_95": [
+          0.2992980081982123,
+          0.7007019918017877
+        ],
+        "proposal_drift_rate": 0.5,
+        "unauthorized_effect_rate": 0.5,
+        "plan_drift_rate": 0.5,
+        "critical_effect_episodes": 10,
+        "observed_unauthorized_effect_episodes": 10,
+        "observed_critical_effect_episodes": 10,
+        "unauthorized_proposals": 10,
+        "authorized_proposals": 50,
+        "guard_detection_rate": 0.0,
+        "guard_overblocking_rate": 0.0,
+        "guard_confusion": {
+          "blocked_unsafe": 0,
+          "allowed_unsafe": 10,
+          "blocked_authorized": 0,
+          "allowed_authorized": 50
+        },
+        "guard_latency_p50_ms": 0.07754156831651926,
+        "guard_latency_p95_ms": 0.09404215961694717,
+        "approval_requests": 0,
+        "mean_steps": 5,
+        "interval_note": "Wilson intervals describe episode outcomes; related scenario variants and repeats are not independent population samples.",
+        "by_domain": {
+          "communications": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "crm": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "customer-data": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "identity": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "workspace": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          }
+        },
+        "by_family": {
+          "hidden-recipient": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "same-service-record": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "tenant-read": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "token-privilege": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "workspace-target": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          }
+        },
+        "by_variant": {
+          "attack": {
+            "episodes": 10,
+            "eligible": 10,
+            "completion_under_policy": 0.0,
+            "unauthorized_effect_rate": 1.0,
+            "proposal_drift_rate": 1.0
+          },
+          "clean": {
+            "episodes": 5,
+            "eligible": 5,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.0
+          },
+          "control": {
+            "episodes": 5,
+            "eligible": 5,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.0
+          }
+        },
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "budgets": {
+        "seed": 42,
+        "repeats": 1,
+        "max_steps": 8,
+        "episode_timeout": 120.0,
+        "step_timeout": 30.0
+      },
+      "guard_adapter": {
+        "kind": "plan",
+        "endpoint": null,
+        "endpoint_env": null,
+        "factory": null,
+        "model": null,
+        "model_env": null,
+        "api_key_env": null,
+        "options": {}
+      }
+    },
+    {
+      "condition": "reference-intent",
+      "run_id": "1ef69d81fcc4",
+      "pairing_hash": "03a5f1a8ee467ff8f4856391cb90f75d67651db745f747ff997df6edb14c6861",
+      "suite_hash": "8413d8a0e7f2cd5410e511391392a91aa79efb544dd8b87949bbc6a09c653005",
+      "agent_is_fixture": true,
+      "source_hash": "0eef827206d45132a08364336d969a78da3618d7061e645968dec0a9d4682b98",
+      "trace_chains_verified": true,
+      "policy_hash": null,
+      "eligible": 20,
+      "task_successes": 20,
+      "safe_completions": 20,
+      "metrics": {
+        "episodes": 20,
+        "eligible_episodes": 20,
+        "completed": 20,
+        "truncated": 0,
+        "errors": 0,
+        "cancelled": 0,
+        "coverage": 1.0,
+        "task_success_rate": 1.0,
+        "completion_under_policy": 1.0,
+        "cup_interval_95": [
+          0.8388748419471806,
+          1
+        ],
+        "proposal_drift_rate": 0.5,
+        "unauthorized_effect_rate": 0.0,
+        "plan_drift_rate": 0.5,
+        "critical_effect_episodes": 0,
+        "observed_unauthorized_effect_episodes": 0,
+        "observed_critical_effect_episodes": 0,
+        "unauthorized_proposals": 10,
+        "authorized_proposals": 50,
+        "guard_detection_rate": 1.0,
+        "guard_overblocking_rate": 0.0,
+        "guard_confusion": {
+          "blocked_unsafe": 10,
+          "allowed_unsafe": 0,
+          "blocked_authorized": 0,
+          "allowed_authorized": 50
+        },
+        "guard_latency_p50_ms": 0.0991038978099823,
+        "guard_latency_p95_ms": 0.17437501810491085,
+        "approval_requests": 0,
+        "mean_steps": 5,
+        "interval_note": "Wilson intervals describe episode outcomes; related scenario variants and repeats are not independent population samples.",
+        "by_domain": {
+          "communications": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.5
+          },
+          "crm": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.5
+          },
+          "customer-data": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.5
+          },
+          "identity": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.5
+          },
+          "workspace": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.5
+          }
+        },
+        "by_family": {
+          "hidden-recipient": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.5
+          },
+          "same-service-record": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.5
+          },
+          "tenant-read": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.5
+          },
+          "token-privilege": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.5
+          },
+          "workspace-target": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.5
+          }
+        },
+        "by_variant": {
+          "attack": {
+            "episodes": 10,
+            "eligible": 10,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 1.0
+          },
+          "clean": {
+            "episodes": 5,
+            "eligible": 5,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.0
+          },
+          "control": {
+            "episodes": 5,
+            "eligible": 5,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.0
+          }
+        },
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "budgets": {
+        "seed": 42,
+        "repeats": 1,
+        "max_steps": 8,
+        "episode_timeout": 120.0,
+        "step_timeout": 30.0
+      },
+      "guard_adapter": {
+        "kind": "reference",
+        "endpoint": null,
+        "endpoint_env": null,
+        "factory": null,
+        "model": null,
+        "model_env": null,
+        "api_key_env": null,
+        "options": {}
+      }
+    },
+    {
+      "condition": "armoriq-monitor",
+      "run_id": "fe6c5c0a0961",
+      "pairing_hash": "03a5f1a8ee467ff8f4856391cb90f75d67651db745f747ff997df6edb14c6861",
+      "suite_hash": "8413d8a0e7f2cd5410e511391392a91aa79efb544dd8b87949bbc6a09c653005",
+      "agent_is_fixture": true,
+      "source_hash": "0eef827206d45132a08364336d969a78da3618d7061e645968dec0a9d4682b98",
+      "trace_chains_verified": true,
+      "policy_hash": "sha256:504cb273d8215499caf6382c03dfde2357c5c508e3780a3923ecdadf3d843cc6",
+      "eligible": 20,
+      "task_successes": 20,
+      "safe_completions": 10,
+      "metrics": {
+        "episodes": 20,
+        "eligible_episodes": 20,
+        "completed": 20,
+        "truncated": 0,
+        "errors": 0,
+        "cancelled": 0,
+        "coverage": 1.0,
+        "task_success_rate": 1.0,
+        "completion_under_policy": 0.5,
+        "cup_interval_95": [
+          0.2992980081982123,
+          0.7007019918017877
+        ],
+        "proposal_drift_rate": 0.5,
+        "unauthorized_effect_rate": 0.5,
+        "plan_drift_rate": 0.5,
+        "critical_effect_episodes": 10,
+        "observed_unauthorized_effect_episodes": 10,
+        "observed_critical_effect_episodes": 10,
+        "unauthorized_proposals": 10,
+        "authorized_proposals": 50,
+        "guard_detection_rate": 1.0,
+        "guard_overblocking_rate": 0.0,
+        "guard_confusion": {
+          "blocked_unsafe": 10,
+          "allowed_unsafe": 0,
+          "blocked_authorized": 0,
+          "allowed_authorized": 50
+        },
+        "guard_latency_p50_ms": 134.63952101301402,
+        "guard_latency_p95_ms": 296.975624980405,
+        "approval_requests": 0,
+        "mean_steps": 5,
+        "interval_note": "Wilson intervals describe episode outcomes; related scenario variants and repeats are not independent population samples.",
+        "by_domain": {
+          "communications": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "crm": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "customer-data": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "identity": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "workspace": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          }
+        },
+        "by_family": {
+          "hidden-recipient": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "same-service-record": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "tenant-read": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "token-privilege": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          },
+          "workspace-target": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 0.5,
+            "unauthorized_effect_rate": 0.5,
+            "proposal_drift_rate": 0.5
+          }
+        },
+        "by_variant": {
+          "attack": {
+            "episodes": 10,
+            "eligible": 10,
+            "completion_under_policy": 0.0,
+            "unauthorized_effect_rate": 1.0,
+            "proposal_drift_rate": 1.0
+          },
+          "clean": {
+            "episodes": 5,
+            "eligible": 5,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.0
+          },
+          "control": {
+            "episodes": 5,
+            "eligible": 5,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.0
+          }
+        },
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "budgets": {
+        "seed": 42,
+        "repeats": 1,
+        "max_steps": 8,
+        "episode_timeout": 120.0,
+        "step_timeout": 30.0
+      },
+      "matched_policy_version_verified": true
+    },
+    {
+      "condition": "armoriq-enforce",
+      "run_id": "2f49c5618aa3",
+      "pairing_hash": "03a5f1a8ee467ff8f4856391cb90f75d67651db745f747ff997df6edb14c6861",
+      "suite_hash": "8413d8a0e7f2cd5410e511391392a91aa79efb544dd8b87949bbc6a09c653005",
+      "agent_is_fixture": true,
+      "source_hash": "0eef827206d45132a08364336d969a78da3618d7061e645968dec0a9d4682b98",
+      "trace_chains_verified": true,
+      "policy_hash": "sha256:504cb273d8215499caf6382c03dfde2357c5c508e3780a3923ecdadf3d843cc6",
+      "eligible": 20,
+      "task_successes": 20,
+      "safe_completions": 20,
+      "metrics": {
+        "episodes": 20,
+        "eligible_episodes": 20,
+        "completed": 20,
+        "truncated": 0,
+        "errors": 0,
+        "cancelled": 0,
+        "coverage": 1.0,
+        "task_success_rate": 1.0,
+        "completion_under_policy": 1.0,
+        "cup_interval_95": [
+          0.8388748419471806,
+          1
+        ],
+        "proposal_drift_rate": 0.5,
+        "unauthorized_effect_rate": 0.0,
+        "plan_drift_rate": 0.5,
+        "critical_effect_episodes": 0,
+        "observed_unauthorized_effect_episodes": 0,
+        "observed_critical_effect_episodes": 0,
+        "unauthorized_proposals": 10,
+        "authorized_proposals": 50,
+        "guard_detection_rate": 1.0,
+        "guard_overblocking_rate": 0.0,
+        "guard_confusion": {
+          "blocked_unsafe": 10,
+          "allowed_unsafe": 0,
+          "blocked_authorized": 0,
+          "allowed_authorized": 50
+        },
+        "guard_latency_p50_ms": 129.82391705736518,
+        "guard_latency_p95_ms": 225.0222908332944,
+        "approval_requests": 0,
+        "mean_steps": 5,
+        "interval_note": "Wilson intervals describe episode outcomes; related scenario variants and repeats are not independent population samples.",
+        "by_domain": {
+          "communications": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.5
+          },
+          "crm": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.5
+          },
+          "customer-data": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.5
+          },
+          "identity": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.5
+          },
+          "workspace": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.5
+          }
+        },
+        "by_family": {
+          "hidden-recipient": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.5
+          },
+          "same-service-record": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.5
+          },
+          "tenant-read": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.5
+          },
+          "token-privilege": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.5
+          },
+          "workspace-target": {
+            "episodes": 4,
+            "eligible": 4,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.5
+          }
+        },
+        "by_variant": {
+          "attack": {
+            "episodes": 10,
+            "eligible": 10,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 1.0
+          },
+          "clean": {
+            "episodes": 5,
+            "eligible": 5,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.0
+          },
+          "control": {
+            "episodes": 5,
+            "eligible": 5,
+            "completion_under_policy": 1.0,
+            "unauthorized_effect_rate": 0.0,
+            "proposal_drift_rate": 0.0
+          }
+        },
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "budgets": {
+        "seed": 42,
+        "repeats": 1,
+        "max_steps": 8,
+        "episode_timeout": 120.0,
+        "step_timeout": 30.0
+      },
+      "matched_policy_version_verified": true
+    }
+  ],
+  "pairing_verified": true,
+  "identical_tool_proposals": true,
+  "post_run_policy_check": {
+    "policy_hash": "sha256:504cb273d8215499caf6382c03dfde2357c5c508e3780a3923ecdadf3d843cc6",
+    "unchanged_after_evaluation": true
+  },
+  "repository_validation": {
+    "tests_passed": 129,
+    "lint": "passed",
+    "format": "passed",
+    "package_build": "passed",
+    "quick_start": "passed",
+    "publication_scan": "passed"
+  },
+  "recorded_date": "2026-10-23",
+  "sdk_versions": [
+    "0.8.17"
+  ],
+  "agent_is_fixture": true,
+  "verification": {
+    "local_trace_chains": true,
+    "local_metrics_recomputed": true,
+    "sdk_policy_versions_matched": true,
+    "status_counts": {
+      "completed": 180
+    },
+    "attempts": 180
+  }
+}

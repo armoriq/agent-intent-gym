@@ -1,0 +1,4 @@
+# Serve the Gym guard protocol at this endpoint; see docs/intent-evaluation.md.
+kind: http
+endpoint: http://127.0.0.1:8772/evaluate
+# api_key_env: EXTERNAL_GUARD_API_KEY

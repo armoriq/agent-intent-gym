@@ -1,0 +1,5 @@
+# Implement check(action=..., context=...) in your_adapter.py.
+kind: python
+factory: examples.intent_guard_adapter:create_guard
+options:
+  checker: your_adapter:check

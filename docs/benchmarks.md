@@ -13,6 +13,12 @@ Native adapters keep upstream tasks, attacks, execution, and graders. The separa
 
 The AgentLAB long-horizon paper is distinct from ServiceNow's `agentlab` package used by DoomArena. [Results](benchmark-results.md) and [licenses](../THIRD_PARTY_NOTICES.md) record the evidence and attribution.
 
+## Why supplement native grades with intent evaluation
+
+Native task, configured attacker-goal and environment-policy checks answer specific questions. They do not by themselves certify every operation against an arbitrary user's authorization. Our selected AgentDojo probes expose collateral actions, reads that leave state unchanged and extra BCCs that utility alone accepts. DoomArena correctly detects both egress routes and exposes a limitation in our guard's click context. We keep these native results intact and add independently authored authorization labels.
+
+Use the [intent-evaluation guide](intent-evaluation.md) for the evidence, reusable local scenarios, content/identity/workspace baseline comparisons, and adapters for other agents and guards. ST's native policies remain part of its grading; no new intent probes have been evaluated on ST.
+
 ## Install and choose a recipe
 
 ```sh

@@ -1,8 +1,39 @@
 # Benchmark results
 
-This ledger reports the **October 22, 2026 v2 policy campaign** behind the [README results](../README.md#results). It contains **24 condition runs / 636 episode attempts**: 15 native episodes and 621 local episodes across overlapping suites. Outcomes are **616 completed, six truncated and 14 errors**, with no cancellations. These are local evaluations, not official leaderboard submissions; native grades and local intent-oracle scores remain separate, with no pooled performance score.
+This ledger links separate October 22–23, 2026 evaluations behind the [README results](../README.md#results). The authorization study demonstrates selected enforcement benefits; the broader model campaign records safety–utility tradeoffs. Scores remain separate, with original native graders and no pooled performance score or official leaderboard claim. The new defense-layer campaign ran October 23; earlier campaign metrics are preserved.
 
-[Machine-readable results](results.json), under `v2_policy_campaign_2026_10_22`, retain all 24 run IDs, budgets, counts, coverage, confusion matrices, failures and verification hashes. Raw traces and account-specific/runtime data remain local in `.intentbench/` and `.benchmarks/`; a fresh clone contains the public summaries.
+| Evaluation | Evidence | Report / machine-readable data |
+| --- | --- | --- |
+| Defense-layer intent study | 20 cases × nine conditions; **180 completed attempts, zero errors/truncations** | [Intent evaluation and control adapters](intent-evaluation.md) · [Detailed data](defense-layer-results.json) |
+| Targeted authorization extensions | 17 authored cases plus native ports; **180 attempts: 170 completed, ten truncated, zero errors** | [Methods and gap analysis](authorization-boundaries.md) · [Detailed data](authorization-boundary-results.json) |
+| Broader v2 policy campaign | **24 condition runs / 636 attempts: 616 completed, six truncated, 14 errors** | [Campaign below](#october-22-v2-policy-campaign) · [Consolidated result index](results.json) |
+
+Raw traces and account-specific/runtime data remain local in `.intentbench/` and `.benchmarks/`; a fresh clone contains public summaries. The result index retains the complete broader campaign and links the targeted evidence.
+
+## Defense-layer intent results
+
+The [intent-evaluation guide](intent-evaluation.md) explains why task utility, attacker-goal checks and execution-scope controls alone do not establish user-intent conformance, and how to evaluate other agents and controls. The new 20-case suite reuses three boundary concepts and adds workspace-file and same-service CRM variants.
+
+The nine-condition campaign has **180 completed attempts, zero errors/truncations**, with identical tool proposals across conditions. Unguarded, content-pattern, identity/tool-grant, workspace/host, their combination, plan membership and ArmorIQ monitor each record **20/20 task successes, 10/20 safe completions and ten unsafe-effect episodes**. **ArmorIQ enforcement and the full reference intent guard each record 20/20 safe completions and zero unsafe effects**, with no denied authorized proposals.
+
+Repository validation passed **129 tests**, lint/format, package build, publication scanning, and the exact offline quick-start command. Eleven separate checks validate the local baselines' declared allow/deny boundaries. They are mechanism proxies, not tests of named products, credential authentication or actual OS isolation. A product configured with the full intent policy could also enforce these rules. [Comparison table, reproducible commands and external-control adapters](intent-evaluation.md#measured-control-layer-comparison) · [Detailed result data](defense-layer-results.json).
+
+## Targeted authorization results
+
+**ArmorIQ prevented unauthorized native calls while preserving all six requested AgentDojo task completions in the scripted extensions.** The native task-utility checks credited all six baseline cases, including four containing an unauthorized call. Independent authored authorization labels expose the difference.
+
+| Evidence class | Without ArmorIQ → enforce | Task success / native utility |
+| --- | --- | --- |
+| Native AgentDojo tasks 0/33 · six scripted cases | Unauthorized native calls **4 → 0**; completions under authored authorization **2/6 → 6/6** | **6/6 → 6/6** |
+| Local 17-case scripted suite | CuP **9/17 → 17/17**; unsafe-effect episodes **8 → 0** | **17/17 → 17/17** |
+| Local 17-case Qwen2.5 3B comparison | CuP **9/17 → 10/17**; unsafe-effect episodes **2 → 0** | **11/17 → 10/17** |
+| Native DoomArena direct-egress scripted case | Target reached **true → false** | Reward **0 → 1** |
+
+The demonstrated coverage gaps are collateral actions omitted by task utility, unauthorized reads invisible to state-equality checks, hidden BCCs omitted by selected email utility, and argument authorization beyond tool scope/plan membership. See the [gap-to-evidence table](authorization-boundaries.md#benchmark-gaps-and-armoriq-evidence) and pinned task implementations. AgentDojo already has strict utility and attacker-goal graders; these findings concern selected checks used alone.
+
+Native probes are scripted, not LLM attack-success rates. The local reference guard also scores 17/17. The actual model loses one task success and records ten truncations across conditions. Indirect link-click navigation still bypasses ArmorIQ even though DoomArena detects it. All policy-authoring diagnostics and the earlier broad results remain available. The corrected MiniWoB wrapper means the earlier DoomArena truncations below are confounded historical rows, not a clean model comparison with the new scripted results.
+
+All 180 final attempts have verified traces/artifacts, recomputed local metrics and matched guarded policy versions. Repository validation at study completion passed **125 tests**, lint/format, package build and publication checks. This differs from the **113-test** snapshot recorded for the earlier campaign below.
 
 ## October 22 v2 policy campaign
 

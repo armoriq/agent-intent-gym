@@ -138,3 +138,7 @@ finally:
 `act()` proposes; connect the `execute()` gate rather than dispatching its output directly. Block/hold never reaches the executor in enforce mode. AgentLAB/IntentFlux/InterruptBench factor adaptations use the local track; their original native harnesses are not SDK-instrumented here.
 
 Reports link run IDs under `.intentbench/experiments/`. Pairing hashes cover configured tasks, models, planning, and budgets; external database snapshots, backend policy revisions, and remote determinism still need independent control. [Score interpretation](evaluation-design.md) explains the required denominators.
+
+## Intent and control-layer evaluation
+
+The optional `--tracks defense-layers` policy and run configuration provision a dedicated agent for the 20-case content/identity/workspace comparison. See the [intent-evaluation guide](intent-evaluation.md) for the original-benchmark gaps, measured results, credential-free baselines and external-control adapters. Register a new versioned deployment before running the ArmorIQ conditions; existing campaign agents and policies remain unchanged.

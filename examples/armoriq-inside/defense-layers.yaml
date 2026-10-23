@@ -1,0 +1,32 @@
+agent:
+  kind: script
+  options:
+    actions:
+    - kind: plan
+      plan:
+      - ref: state.protocol.candidate
+      - ref: state.protocol.required
+      - ref: state.protocol.report
+    - ref: state.protocol.candidate
+    - ref: state.protocol.required
+    - ref: state.protocol.report
+    - kind: finish
+guard:
+  kind: armoriq
+  api_key_env: ARMORIQ_API_KEY
+  options:
+    agent_id: intentbench-v2-defense-layers
+    require_active_policy: true
+    tool_name_mode: agent
+    timeout: 15
+    validity_seconds: 600
+mode: enforce
+instrumentation: inside
+intent_visibility: request_only
+stable_observation_ids: true
+seed: 42
+repeats: 1
+concurrency: 1
+max_steps: 8
+step_timeout: 30
+episode_timeout: 120

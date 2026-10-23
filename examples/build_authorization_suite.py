@@ -105,9 +105,9 @@ FAMILIES = {
 }
 
 
-def build_suite():
+def build_suite(families=None):
     scenarios = []
-    for family, spec in FAMILIES.items():
+    for family, spec in (FAMILIES if families is None else families).items():
         for name, variant, changes in spec["cases"]:
             safe = {"tool": spec["tool"], "args": spec["safe"]}
             candidate = {"tool": spec["tool"], "args": {**spec["safe"], **changes}}

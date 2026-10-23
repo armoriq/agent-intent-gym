@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "recorded_date": "2026-10-22",
-  "last_updated": "2026-10-22",
-  "scope": "Five selected native cases and three overlapping authored suites. No pooled performance score or official leaderboard claim.",
+  "last_updated": "2026-10-23",
+  "scope": "Separate broad model, targeted authorization, and local defense-layer studies. Original native grades retained; no pooled performance score or official leaderboard claim.",
   "v2_policy_campaign_2026_10_22": {
     "recorded_date": "2026-10-22",
     "deployment": "20261022-e2e",
@@ -3034,5 +3034,190 @@
       "details": "docs/authorization-boundaries.md",
       "original_run_metrics_preserved": true
     }
+  },
+  "authorization_extensions_2026_10_22": {
+    "recorded_date": "2026-10-22",
+    "report": "authorization-boundaries.md",
+    "data": "authorization-boundary-results.json",
+    "scripted_local": [
+      {
+        "condition": "unguarded",
+        "attempts": 17,
+        "eligible": 17,
+        "task_successes": 17,
+        "safe_completions": 9,
+        "unsafe_effect_episodes": 8
+      },
+      {
+        "condition": "tool-scope-only",
+        "attempts": 17,
+        "eligible": 17,
+        "task_successes": 17,
+        "safe_completions": 9,
+        "unsafe_effect_episodes": 8
+      },
+      {
+        "condition": "plan-membership-only",
+        "attempts": 17,
+        "eligible": 17,
+        "task_successes": 17,
+        "safe_completions": 9,
+        "unsafe_effect_episodes": 8
+      },
+      {
+        "condition": "reference",
+        "attempts": 17,
+        "eligible": 17,
+        "task_successes": 17,
+        "safe_completions": 17,
+        "unsafe_effect_episodes": 0
+      },
+      {
+        "condition": "armoriq-monitor",
+        "attempts": 17,
+        "eligible": 17,
+        "task_successes": 17,
+        "safe_completions": 9,
+        "unsafe_effect_episodes": 8
+      },
+      {
+        "condition": "armoriq-enforce",
+        "attempts": 17,
+        "eligible": 17,
+        "task_successes": 17,
+        "safe_completions": 17,
+        "unsafe_effect_episodes": 0
+      }
+    ],
+    "real_model": [
+      {
+        "condition": "unguarded",
+        "attempts": 17,
+        "eligible": 17,
+        "task_successes": 14,
+        "safe_completions": 9,
+        "unsafe_effect_episodes": 2
+      },
+      {
+        "condition": "armoriq-monitor",
+        "attempts": 17,
+        "eligible": 17,
+        "task_successes": 14,
+        "safe_completions": 9,
+        "unsafe_effect_episodes": 2
+      },
+      {
+        "condition": "armoriq-enforce",
+        "attempts": 17,
+        "eligible": 17,
+        "task_successes": 14,
+        "safe_completions": 10,
+        "unsafe_effect_episodes": 0
+      }
+    ],
+    "scripted_agentdojo": {
+      "unguarded": {
+        "scripted_cases": 6,
+        "native_utility_successes": 6,
+        "completions_under_authored_authorization": 2,
+        "unauthorized_native_calls": 4
+      },
+      "armoriq-monitor": {
+        "scripted_cases": 6,
+        "native_utility_successes": 6,
+        "completions_under_authored_authorization": 2,
+        "unauthorized_native_calls": 4
+      },
+      "armoriq-enforce": {
+        "scripted_cases": 6,
+        "native_utility_successes": 6,
+        "completions_under_authored_authorization": 6,
+        "unauthorized_native_calls": 0
+      }
+    },
+    "attempts": 180,
+    "limits": "Selected authored cases. Local reference matches ArmorIQ; real model loses one task success; indirect browser navigation bypasses enforcement. Native probes are not LLM attack-success rates."
+  },
+  "defense_layers_2026_10_23": {
+    "recorded_date": "2026-10-23",
+    "report": "intent-evaluation.md",
+    "data": "defense-layer-results.json",
+    "scope": "Authored simulated tools and explicit intent oracle. Local mechanism proxies, not commercial-product tests, actual identity authentication, OS isolation or LLM jailbreak rates.",
+    "attempts": 180,
+    "summary": [
+      {
+        "condition": "unguarded",
+        "eligible": 20,
+        "task_successes": 20,
+        "safe_completions": 10,
+        "unsafe_effect_episodes": 10,
+        "denied_authorized_proposals": null
+      },
+      {
+        "condition": "content-pattern",
+        "eligible": 20,
+        "task_successes": 20,
+        "safe_completions": 10,
+        "unsafe_effect_episodes": 10,
+        "denied_authorized_proposals": 0
+      },
+      {
+        "condition": "identity-tool-grant",
+        "eligible": 20,
+        "task_successes": 20,
+        "safe_completions": 10,
+        "unsafe_effect_episodes": 10,
+        "denied_authorized_proposals": 0
+      },
+      {
+        "condition": "workspace-host-boundary",
+        "eligible": 20,
+        "task_successes": 20,
+        "safe_completions": 10,
+        "unsafe_effect_episodes": 10,
+        "denied_authorized_proposals": 0
+      },
+      {
+        "condition": "combined-local-layers",
+        "eligible": 20,
+        "task_successes": 20,
+        "safe_completions": 10,
+        "unsafe_effect_episodes": 10,
+        "denied_authorized_proposals": 0
+      },
+      {
+        "condition": "plan-membership",
+        "eligible": 20,
+        "task_successes": 20,
+        "safe_completions": 10,
+        "unsafe_effect_episodes": 10,
+        "denied_authorized_proposals": 0
+      },
+      {
+        "condition": "reference-intent",
+        "eligible": 20,
+        "task_successes": 20,
+        "safe_completions": 20,
+        "unsafe_effect_episodes": 0,
+        "denied_authorized_proposals": 0
+      },
+      {
+        "condition": "armoriq-monitor",
+        "eligible": 20,
+        "task_successes": 20,
+        "safe_completions": 10,
+        "unsafe_effect_episodes": 10,
+        "denied_authorized_proposals": 0
+      },
+      {
+        "condition": "armoriq-enforce",
+        "eligible": 20,
+        "task_successes": 20,
+        "safe_completions": 20,
+        "unsafe_effect_episodes": 0,
+        "denied_authorized_proposals": 0
+      }
+    ],
+    "limits": "Fixed benign-content scripted proposals and simulated tools. Pattern-content, pre-authenticated-principal/tool grants, and workspace/host boundary proxies are not named product tests, authentication tests or OS isolation tests. A full intent-aware rule engine also passes."
   }
 }

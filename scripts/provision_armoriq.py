@@ -22,15 +22,16 @@ from agent_intent_bench.settings import load_environment
 
 ROOT = Path(__file__).resolve().parents[1]
 TRACKS = ("intent-gym", "agentdojo", "stwebagentbench", "doomarena")
-OPTIONAL_TRACKS = ("authorization-boundaries", "agentdojo-bcc")
+LOCAL_TRACKS = ("authorization-boundaries", "defense-layers")
+OPTIONAL_TRACKS = (*LOCAL_TRACKS, "agentdojo-bcc")
 
 
 def tool_catalog(track, inventory):
     sources = (
         {"core", "research-factors"}
         if track == "intent-gym"
-        else {"authorization-boundaries"}
-        if track == "authorization-boundaries"
+        else {track}
+        if track in LOCAL_TRACKS
         else {"agentdojo/workspace"}
         if track in {"agentdojo", "agentdojo-bcc"}
         else {"browser-action-mapper"}
@@ -119,15 +120,11 @@ def import_apikey(document, folder, key):
 def write_runtime_profile(root, agents, policies):
     source = ROOT / "examples/armoriq-inside"
     profile = yaml.safe_load((source / "experiment.yaml").read_text())
-    if "authorization-boundaries" in policies:
-        profile["tracks"].append(
-            {
-                "name": "authorization-boundaries",
-                "kind": "gym",
-                "config": "authorization-boundaries.yaml",
-                "suite": "authorization-boundaries",
-            }
-        )
+    for name in LOCAL_TRACKS:
+        if name in policies:
+            profile["tracks"].append(
+                {"name": name, "kind": "gym", "config": name + ".yaml", "suite": name}
+            )
     if "agentdojo-bcc" in policies:
         profile["tracks"].append(
             {"name": "agentdojo-bcc", "kind": "native", "config": "agentdojo-bcc.yaml"}
@@ -139,9 +136,7 @@ def write_runtime_profile(root, agents, policies):
         config = yaml.safe_load((source / track["config"]).read_text())
         identity = config.get(
             "benchmark",
-            "authorization-boundaries"
-            if track["name"] == "authorization-boundaries"
-            else "intent-gym",
+            track["name"] if track["name"] in LOCAL_TRACKS else "intent-gym",
         )
         identity = config["guard"]["options"].get("provisioning_track", identity)
         if identity not in policies:

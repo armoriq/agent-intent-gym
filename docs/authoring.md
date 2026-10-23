@@ -88,3 +88,7 @@ Each disturbance specifies zero-based proposal `step`, `phase`, `kind`, `source`
 `ask_user` submits one exact `{tool, args}`. The simulated user follows the declared contract, with `approval_behavior: approve_valid|deny|unavailable`; it does not follow tool injections. This does not implement a production human approval flow.
 
 For every challenge, add a clean case and a legitimate/helpful control. Keep success grading independent of the guard. Local `--policy policy.yaml` replaces reference-guard rules and overlays facts while leaving the oracle fixed; ArmorIQ/HTTP/Python guard policy is configured externally. [Evaluation design](evaluation-design.md) explains factors and denominators.
+
+## Worked intent-evaluation suites
+
+Use `authorization-boundaries` for tenant, BCC, token and publication examples; use `defense-layers` for paired cases that stay inside configured content, identity/tool and workspace/host scopes while exceeding the user's authorization. Both load by name or YAML path. The [portable scripted configuration](../examples/intent-evaluation.yaml) works without credentials. The [intent-evaluation guide](intent-evaluation.md) shows measured outcomes and how to substitute your own agent or security control while retaining independent grading.

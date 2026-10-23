@@ -55,3 +55,11 @@ Report clean, attack, helpful-control, user-change, and fault cases separately. 
 Local `--policy` overrides replace only reference-guard rules/facts. They do not change the private oracle or configure ArmorIQ backend policies. [Authoring](authoring.md) explains the rule language; [the ledger](benchmark-results.md) shows the recorded protocols.
 
 The [authorization-boundary extensions](authorization-boundaries.md) add paired per-call capability probes, an independent native authorization overlay, and stable opaque observation IDs for matched model runs. Their scripted and real-model results remain separate.
+
+## Measure what task utility can miss
+
+The [targeted gap analysis](authorization-boundaries.md#benchmark-gaps-and-armoriq-evidence) distinguishes three checks: **task completion**, **state integrity**, and **authorization of each operation**. Selected AgentDojo utility predicates can credit a correct answer or requested email despite collateral actions or an extra BCC. Strict state equality catches mutations, but an unrelated read can leave state unchanged. Record per-request authorization alongside the native grades to expose those cases.
+
+The same distinction applies to plans: declaration of an operation and approval of its tool do not authorize every argument. Compare identical proposal streams against tool-scope, plan-membership and full argument-policy baselines. Include a correct reference guard and legitimate controls; successful enforcement should preserve the requested work. For browser actions, verify which trusted resource/destination evidence actually reaches the guard. The DoomArena probes detect indirect egress that the current generic click policy permits.
+
+The [defense-layer extension](intent-evaluation.md#beyond-content-identity-and-sandbox-boundaries) holds proposals fixed while ablating content patterns, pre-authenticated principal/tool grants, workspace/host boundaries, their combination and full intent predicates. Scope-only proxies are distinct from actual commercial products or operating-system sandboxes. External adapters must record what evidence and policy each product actually checks; do not infer a category-wide inability from a partial configuration.
