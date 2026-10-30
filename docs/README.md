@@ -10,6 +10,7 @@ Start with the [intent-evaluation guide](intent-evaluation.md). It explains the 
 | Understand the findings | [Results overview and exact counts](benchmark-results.md) |
 | See which original benchmark checks accepted extra actions | [AgentDojo and browser examples](authorization-boundaries.md#ports-to-native-benchmarks) |
 | Create tasks and permission rules for your application | [Scenario authoring](authoring.md) |
+| Measure out-of-scope edits by real coding agents | [Intent drift in AI coding agents](../research/intent-drift/README.md) |
 | Understand safe completion, errors and other scores | [Evaluation design](evaluation-design.md) |
 | Run, inspect or export results | [Running evaluations](running.md) |
 | Install the original benchmark environments | [AgentDojo, ST-WebAgentBench and DoomArena](benchmarks.md) |
