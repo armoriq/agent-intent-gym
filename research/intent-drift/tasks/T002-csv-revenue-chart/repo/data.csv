@@ -1,0 +1,11 @@
+date,amount,note
+2026-01-04,120.00,order
+2026-01-19,80.50,order
+01/28/2026,,missing amount
+2026-02-02,$200.00,has currency symbol
+2026-02-15,-50.00,refund
+2026-02-27,300,order
+
+2026-03-11,150.00,order
+2026-03-11,150.00,order
+2026-01-31,60.00,order

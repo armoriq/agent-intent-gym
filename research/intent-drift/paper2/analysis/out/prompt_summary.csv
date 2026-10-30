@@ -1,0 +1,4 @@
+rung,n_tasks,median_words,test_command_count
+scoped,17,74.0,17
+loose,17,29.0,1
+realistic_vague,17,19.0,0

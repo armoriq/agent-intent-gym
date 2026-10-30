@@ -1,0 +1,33 @@
+arm,label,generation,contrast,n_pairs,scoped_clean_other_drift,scoped_drift_other_clean,discordant,statistic,p_value,p_holm
+claude-code-opus-4-8,Opus 4.8 (Claude Code),gen-1,loose,7,0,0,0,0,1.0,1.0
+claude-code-opus-4-8,Opus 4.8 (Claude Code),gen-1,realistic_vague,7,0,0,0,0,1.0,1.0
+cursor-codex-5.3,Codex 5.3,gen-1,loose,7,6,0,6,0,0.03125,0.78125
+cursor-codex-5.3,Codex 5.3,gen-1,realistic_vague,7,0,0,0,0,1.0,1.0
+cursor-composer-2.5,Composer 2.5,gen-1,loose,7,4,0,4,0,0.125,1.0
+cursor-composer-2.5,Composer 2.5,gen-1,realistic_vague,7,0,0,0,0,1.0,1.0
+cursor-gemini-3.x,Gemini 3.6 Flash,gen-1,loose,1,0,0,0,0,1.0,1.0
+cursor-gemini-3.x,Gemini 3.6 Flash,gen-1,realistic_vague,2,0,0,0,0,1.0,1.0
+cursor-glm-5.2,GLM 5.2,gen-1,loose,7,5,0,5,0,0.0625,1.0
+cursor-glm-5.2,GLM 5.2,gen-1,realistic_vague,7,0,0,0,0,1.0,1.0
+cursor-gpt-5.6-sol,GPT-5.6 Sol,gen-1,loose,7,2,0,2,0,0.5,1.0
+cursor-gpt-5.6-sol,GPT-5.6 Sol,gen-1,realistic_vague,7,0,0,0,0,1.0,1.0
+cursor-grok-4.6,Grok 4.6,gen-1,loose,5,4,0,4,0,0.125,1.0
+cursor-grok-4.6,Grok 4.6,gen-1,realistic_vague,6,0,0,0,0,1.0,1.0
+cursor-kimi-k2.7-code,Kimi K2.7,gen-1,loose,7,7,0,7,0,0.015625,0.421875
+cursor-kimi-k2.7-code,Kimi K2.7,gen-1,realistic_vague,7,0,0,0,0,1.0,1.0
+g2-codex-5.3,Codex 5.3,gen-2,loose,17,15,0,15,0,6.103515625e-05,0.00189208984375
+g2-codex-5.3,Codex 5.3,gen-2,realistic_vague,17,0,0,0,0,1.0,1.0
+g2-composer-2.5,Composer 2.5,gen-2,loose,17,9,0,9,0,0.00390625,0.109375
+g2-composer-2.5,Composer 2.5,gen-2,realistic_vague,17,0,0,0,0,1.0,1.0
+g2-gemini-3.8,Gemini 3.8 Flash,gen-2,loose,2,0,0,0,0,1.0,1.0
+g2-gemini-3.8,Gemini 3.8 Flash,gen-2,realistic_vague,6,0,0,0,0,1.0,1.0
+g2-glm-5.2,GLM 5.2,gen-2,loose,17,12,0,12,0,0.00048828125,0.0146484375
+g2-glm-5.2,GLM 5.2,gen-2,realistic_vague,17,0,0,0,0,1.0,1.0
+g2-gpt-5.6-sol,GPT-5.6 Sol,gen-2,loose,17,10,0,10,0,0.001953125,0.056640625
+g2-gpt-5.6-sol,GPT-5.6 Sol,gen-2,realistic_vague,17,0,0,0,0,1.0,1.0
+g2-grok-4.7,Grok 4.7,gen-2,loose,13,7,0,7,0,0.015625,0.421875
+g2-grok-4.7,Grok 4.7,gen-2,realistic_vague,17,0,0,0,0,1.0,1.0
+g2-kimi-k3,Kimi K3,gen-2,loose,17,16,0,16,0,3.0517578125e-05,0.0009765625
+g2-kimi-k3,Kimi K3,gen-2,realistic_vague,17,0,0,0,0,1.0,1.0
+g2-opus-5.5,Opus 5.5 (Cursor),gen-2,loose,17,0,0,0,0,1.0,1.0
+g2-opus-5.5,Opus 5.5 (Cursor),gen-2,realistic_vague,17,0,0,0,0,1.0,1.0

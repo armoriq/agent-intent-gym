@@ -1,0 +1,87 @@
+\section{Threats to validity}
+\label{sec:limits}
+
+\subsection{Construct validity}
+
+\paragraph{Our own definition of scope.} The primary measure counts edits to
+four functions that we chose, and the broader measure adds tests, other
+functions, and new files, but neither catches every possible excursion (for
+example, a changed docstring in the target function). A reader could argue that, under the loose
+prompt, some of those edits were invited. We think the more useful reading is
+the one a reviewer of a bug-fix pull request would take, but we report the
+hidden-test outcome alongside the symbol count so the two readings can be
+separated.
+
+\paragraph{Arms, not models.} Every comparison is between shipped
+configurations. Within the Cursor arms the scaffold is shared, which narrows
+the gap between an arm and its model, but the scaffold may still interact
+with each model differently, and the single Claude Code arm in generation~1
+differs from the rest in both model and harness.
+
+\paragraph{What was recorded about each model.} We record the model flag we
+passed to each client, not the model version the vendor actually served or
+the client version, so we cannot rule out silent changes on the vendor side
+during the study.
+
+\subsection{Internal validity}
+
+\paragraph{Agents were not sandboxed.} Each agent started in a fresh copy of
+the task, but that copy sat inside the benchmark directory and the agents
+had ordinary file-system access. Some agents walked up the tree and read
+canonical task files, hidden tests, reference solutions, or earlier runs. We
+detect these runs from their trajectories and exclude them, and the main
+results are the same with or without them, but the detection rule can miss
+access that leaves no trace in the tool calls. Future runs should place the
+working copy outside the benchmark tree or in a container.
+
+\paragraph{The working directory named the rung.} Each run's directory name included the task slug, such as
+\texttt{T005-percentile-loose-prompt}, and an agent could see it. We have no
+evidence that agents used this, but it is a channel through which an agent
+could learn which condition it was in.
+
+\paragraph{Rungs differ in more than register.} The scoped prompts end with
+the command that runs the visible tests; only \NTestCmdLoose{} of the
+\NDomains{} loose prompts and \NTestCmdVague{} vague prompts do. This could raise
+exploration on the loose and vague rungs, so we do not read the differences in
+unique tool calls as a pure effect of wording. It is harder to see how it
+could explain planted-function edits under the loose prompt alone, since the
+vague prompts lack the command as well.
+
+\paragraph{Incomplete and long sessions.} We treat a run as valid if the
+harness recorded no error and the agent made at least one tool call. In the
+analyzed set, \XIncomplete{} valid trajectories end without a final result
+event and \XOverTime{} runs recorded a wall time above the nominal 600-second limit
+without being flagged as timeouts, for reasons we have not diagnosed. We kept these runs, since they produced a scorable working
+copy, but a stricter validity rule would drop them.
+
+\paragraph{Lost runs.} Some generation-2 arms lost runs to vendor usage caps
+or to sessions that ended before the agent acted. These invalid runs are
+excluded rather than scored, and the counts are reported per arm
+(Table~\ref{tab:coverage}). If losses were related
+to task content, the remaining sample could be biased; we saw no sign of
+this. Nearly all invalid runs were started during a few hours on a single
+evening (28 September 2026), and retries of the same tasks in October
+completed normally, which points to a temporary vendor-side condition rather
+than to anything about the tasks.
+
+\paragraph{Few runs per cell.} Most arm-task cells hold one run. Agent
+behavior is not deterministic, so an individual cell (one arm on one loose
+task) should be read as one draw rather than as that arm's behavior. Our
+conclusions rest on pooled rates over many cells and on the within-task
+contrast between rungs, which is less exposed to this noise than any single
+cell.
+
+\subsection{External validity}
+
+\paragraph{Narrow tasks.} The repositories are small, the bugs are local, and
+every task is in Python. This is deliberate, because it makes ``out of scope''
+well defined, but it means our rates describe a clean laboratory setting.
+Real repositories offer far more to drift into, so the absolute rates there
+may differ; we have not measured them.
+
+\paragraph{Prompt calibration from one person.} The vague rung was written with
+the prompting habits of one developer in mind, and the design-time profile we
+report comes from that developer's private history. Other developers may write longer or
+more specific requests, and the loose and vague templates are our own
+wording. A broader sample of real prompts would make the ladder more
+representative.

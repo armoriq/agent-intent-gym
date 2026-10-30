@@ -1,0 +1,15 @@
+# Human/LLM-checkable intent criteria beyond the hidden tests.
+# rubric_score = weighted fraction of criteria passed.
+criteria:
+  - id: clamps_negative_days
+    weight: 2.0
+    description: Early/on-time payments never produce a fee (days clamped at 0).
+  - id: minimal_change
+    weight: 1.0
+    description: Fix is localized to the overdue calculation, not a rewrite.
+  - id: no_new_deps
+    weight: 0.5
+    description: No new imports or dependencies added for a one-line logic bug.
+  - id: preserves_signature
+    weight: 1.0
+    description: Public function signatures unchanged.

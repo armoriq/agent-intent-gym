@@ -1,0 +1,56 @@
+\section{Discussion}
+\label{sec:discussion}
+
+\paragraph{Why the loose prompt and not the vague one?}
+The two prompts that produced no drift have something in common that the
+loose prompt lacks: each one asks for a fix. The scoped prompt names it, and
+the vague prompt describes a symptom and asks for it to go away. The loose
+prompt asks for the code to be put ``into good shape'', which is a request
+for improvement with no stated limit, and the rabbit holes are exactly the
+things an agent can point to as improvements. Our reading is that agents
+treat the request's \emph{register} as a statement of scope: in this ladder,
+``get things into good shape'' led many agents to edit the planted helpers,
+while requests for a fix, specific or not, did not. This is consistent with work on
+sycophancy \citep{sharma2024towards,perez2023discovering}, where models adapt
+their output to what they take the user to want, with the finding of
+\citet{qu2026overeager} that removing an explicit scope statement from the
+prompt raises the rate of out-of-scope actions by coding agents, and with the
+widened diffs \citet{weinberger2026promptinduced} report for a cleanup
+clause. It runs
+against a common intuition, which we held when designing the study, that
+underspecified prompts are the dangerous ones, and against the result of
+\citet{ji2026coding} for agents working in a simulated operations
+environment. In our data, vague runs used more tool calls and made no planted-function
+edits, although they did make other out-of-scope edits, mostly to tests, in
+about an eighth of runs.
+
+We should be careful about how far this goes. Our loose prompts are one
+template, and a different phrasing (``fix this and tidy up anything that
+looks wrong'') would almost certainly change the rate. The claim we can
+support is narrower: holding everything else fixed, a cleanup-flavored
+request is enough to move most agents from no drift to frequent drift, and
+an equally short request for a fix is not.
+
+\paragraph{What pass/fail scoring cannot see.}
+Most visible/hidden designs, including ours, were built on the assumption
+that intent violations show up as behavior changes. In our data they mostly
+do not. Agents that rewrote helpers usually preserved the behaviors the
+hidden tests check, about a quarter of planted-function edits changed only
+comments or docstrings, and the only trace of the excursion was in the diff.
+This matters for how coding agents are evaluated. A benchmark that reports
+only resolved rates, even with strong held-out tests, will rate an agent that
+rewrites four functions it was not asked about the same as one that changes
+one line. We
+think a scope measure belongs next to every pass rate, and that a
+function-level diff against a list of out-of-scope symbols is a cheap way to
+get one.
+
+\paragraph{Practical advice.}
+In these tasks, symptom-only requests did not lead agents to change the
+planted helpers, and cleanup requests often did. Phrases like ``clean up'', ``get this into
+shape'', or ``take a look at the related helpers'' are read by most current
+agents as permission to change more than the bug. Among the arms we tested,
+model choice mattered as well: the two Anthropic arms never edited a planted
+function under the loose prompt that most other arms acted on, although
+Opus~5.5 still made other out-of-scope edits, half of them to test files, on
+about a third of loose tasks.

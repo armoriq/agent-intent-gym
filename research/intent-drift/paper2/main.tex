@@ -1,0 +1,117 @@
+\documentclass[sigconf,nonacm]{acmart}
+
+\usepackage{enumitem}
+\usepackage{framed}
+\usepackage{placeins}
+\usepackage{siunitx}
+\usepackage{fancyvrb}
+\usepackage{xspace}
+\newcommand{\rnd}[1]{\num[round-mode=places,round-precision=1]{#1}}
+
+\setlist{itemsep=2pt,topsep=4pt}
+\setlength{\emergencystretch}{2em}
+
+% Keep floats on pages with text instead of isolated float-only pages.
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\dbltopfraction}{0.9}
+\renewcommand{\textfraction}{0.07}
+\renewcommand{\floatpagefraction}{0.85}
+\renewcommand{\dblfloatpagefraction}{0.85}
+\setcounter{topnumber}{3}
+\setcounter{dbltopnumber}{2}
+
+% Every empirical number is a macro generated from db/results.db by
+% analysis/analyze.py -> analysis/out/macros.tex. \TBD marks text still waiting on data.
+\newcommand{\TBD}[1]{\textbf{[TBD: #1]}}
+\IfFileExists{analysis/out/macros.tex}{\input{analysis/out/macros.tex}}{}
+\input{sections/_paper_macros}
+\input{sections/_exec_macros}
+\input{sections/_fallbacks}
+
+\newcommand{\ie}{i.e.,\xspace}
+\newcommand{\eg}{e.g.,\xspace}
+
+\begin{document}
+
+\title{Measuring Intent Drift in AI Coding Agents}
+\subtitle{A Controlled Benchmark of Prompt Wording, Hidden Tests, and Out-of-Scope Edits}
+
+\author{Pulkit Saraf}
+\email{10617702723\_cse@vipstc.edu.in}
+\affiliation{%
+  \department{Department of Computer Science and Engineering}
+  \institution{Vivekananda Institute of Professional Studies\\Technical Campus}
+  \city{New Delhi}
+  \country{India}}
+
+\author{Vansh Nagpal}
+\email{20117702723\_cse@vipstc.edu.in}
+\affiliation{%
+  \department{Department of Computer Science and Engineering}
+  \institution{Vivekananda Institute of Professional Studies\\Technical Campus}
+  \city{New Delhi}
+  \country{India}}
+
+\author{Manasvi}
+\email{35417702723\_cse@vipstc.edu.in}
+\affiliation{%
+  \department{Department of Computer Science and Engineering}
+  \institution{Vivekananda Institute of Professional Studies\\Technical Campus}
+  \city{New Delhi}
+  \country{India}}
+
+\author{Dr. Himika}
+\authornote{Faculty mentor.}
+\email{himika.verma@vips.edu}
+\affiliation{%
+  \department{Department of Computer Science and Engineering}
+  \institution{Vivekananda Institute of Professional Studies\\Technical Campus}
+  \city{New Delhi}
+  \country{India}}
+
+\renewcommand{\shortauthors}{Saraf, Nagpal, Manasvi, and Himika}
+
+\begin{abstract}
+\input{sections/abstract}
+\end{abstract}
+
+\begin{CCSXML}
+<ccs2012>
+<concept>
+<concept_id>10011007.10011074.10011099</concept_id>
+<concept_desc>Software and its engineering~Software verification and validation</concept_desc>
+<concept_significance>500</concept_significance>
+</concept>
+<concept>
+<concept_id>10010147.10010178</concept_id>
+<concept_desc>Computing methodologies~Artificial intelligence</concept_desc>
+<concept_significance>300</concept_significance>
+</concept>
+</ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Software and its engineering~Software verification and validation}
+\ccsdesc[300]{Computing methodologies~Artificial intelligence}
+
+\keywords{coding agents, large language models, benchmark, prompt sensitivity,
+scope creep, specification gaming, hidden tests}
+
+\maketitle
+
+\input{sections/introduction}
+\input{sections/related}
+\input{sections/method}
+\input{sections/setup}
+\input{sections/results}
+\input{sections/discussion}
+\input{sections/limitations}
+\input{sections/conclusion}
+\input{sections/statements}
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{refs/refs}
+
+\appendix
+\input{sections/appendix}
+
+\end{document}

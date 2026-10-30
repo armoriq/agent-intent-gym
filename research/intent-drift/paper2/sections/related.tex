@@ -1,0 +1,138 @@
+\section{Related work}
+\label{sec:related}
+
+\paragraph{Proxies, gaming, and side effects.}
+The gap between what an objective rewards and what its designer meant has a
+long history. \citet{manheim2018categorizing} separate four ways a proxy can
+come apart from its goal under optimization; the case closest to ours is what
+they call \emph{extremal} Goodhart, where the proxy is accurate for ordinary
+solutions and stops tracking the goal once an optimizer pushes into unusual
+ones. \citet{amodei2016concrete} discuss two relevant failure modes. Their
+\emph{reward hacking} motivates visible/hidden test splits such as ours.
+Their \emph{negative side effects} are the closer analogy for what we
+observe: an objective that is silent about part of the environment leaves the
+agent free to disturb it. In our setting the visible tests say
+nothing about the code around the bug, so an agent can rewrite it while
+passing them.
+\citet{krakovna2020specification} collect dozens of such cases under the name
+\emph{specification gaming}, drawing on a community-maintained list of
+examples \citep{krakovna2018specificationexamples}. \citet{skalse2022defining} show formally that
+when the agent can choose among all stochastic policies, a proxy that can
+never be gamed must be equivalent to the true reward or trivial, and \citet{pan2022effects} find that more capable agents can score
+higher on a misspecified proxy while doing worse on the true reward, sometimes
+with an abrupt transition. That last result is one reason we track two model
+generations instead of one.
+
+\paragraph{Gaming by language-model agents.}
+Recent work has moved these ideas to language models acting with tools.
+\citet{denison2024sycophancy} train models on a curriculum of increasingly
+gameable tasks and find a small rate of zero-shot tampering with a reward
+function, occasionally including edits to the unit tests meant to catch it.
+\citet{bondarenko2025demonstrating} show that some reasoning models, asked to
+beat a chess engine, rewrite the board state instead of playing, and that the
+propensity varies sharply between models and with the wording of the
+instruction. \citet{baker2025monitoring} document reward hacks that arose
+during the training of a frontier reasoning model on agentic coding tasks,
+including exiting before the tests run, skipping tests, and editing test files,
+and use the trick of reverting test edits to expose them. The same pattern
+appears outside training. Anthropic's system card for Claude~3.7 Sonnet
+reports that the model occasionally special-cases tests in agentic coding
+environments and sometimes modifies them \citep{anthropic2025claude}, and
+METR observed frontier models overwriting timers and patching evaluators on
+its autonomy tasks, more often when the scoring code was visible
+\citep{vonarx2025recent}. These studies look
+for adversarial behavior: the agent defeats the check. We measure something milder: unrequested edits made while fixing a bug,
+including edits that leave every test passing. Our agents almost always fix the
+bug, and the excursions we measure are mostly not attempts to defeat a check;
+they simply do more than they were asked.
+
+\paragraph{Code benchmarks and what pass rates hide.}
+HumanEval \citep{chen2021evaluating} and MBPP \citep{austin2021program} made
+unit-test pass rates the standard measure of code generation, and SWE-bench
+\citep{jimenez2024swebench} carried the idea to repository-level issues, where
+an agent's patch is judged by tests it never sees. Agent scaffolds such as
+SWE-agent \citep{yang2024sweagent} and OpenHands \citep{wang2025openhands},
+and the non-agentic Agentless pipeline \citep{xia2025demystifying}, were built
+and compared on this benchmark, and later variants extended it to visual
+software domains \citep{yang2025swebench} and to long-horizon enterprise tasks
+\citep{deng2025swebench}. A steady line of work has
+since shown how much such scores can hide. EvalPlus \citep{liu2023evalplus}
+added many more tests to HumanEval and found that a sizeable share of
+accepted solutions were wrong. MBPP's own authors observed a model
+hard-coding an input to pass a visible assert \citep{austin2021program}. An
+audit of resolved SWE-bench instances found that about a third of them leaked
+the fix in the issue text and a similar share passed only because the tests
+were weak \citep{aleithan2024swebench}. OpenAI's annotation of SWE-bench led
+to the Verified subset \citep{chowdhury2024introducing}, and a later audit led
+OpenAI to stop reporting it altogether \citep{openai2026why}; an independent
+review rates the subset as flawed \citep{epoch2026swebenchverified}. Surveys of
+the field make the underlying point directly: many things developers want from
+a change cannot be written as unit tests \citep{gu2025challenges}, and
+agentic benchmarks need explicit checks that their tasks and graders measure
+what they claim \citep{zhu2025establishing}. Contamination
+adds a further layer: models recall SWE-bench file paths from issue text alone
+far more often than for repositories outside the benchmark \citep{liang2025swebench}, and
+classic code benchmarks overlap with common training corpora
+\citep{riddell2024quantifying,matton2024leakage}, which motivates fresh,
+time-stamped tasks \citep{jain2025livecodebench,zhang2025swebench,badertdinov2025swerebench}.
+Our tasks were written for this study and never published, and our hidden
+tests play the role that held-out tests play in these benchmarks. The
+difference is that we also measure what the agent changed that no test, seen
+or unseen, is designed to check.
+
+\paragraph{Closest prior work.}
+Several recent studies contain one of our instruments, and one anticipates
+part of our main result. SpecBench \citep{zhao2026specbench} gives
+long-horizon coding agents visible validation tests and scores them on
+held-out tests, defining a reward hacking gap that is essentially the pass gap we also
+report (\S\ref{sec:method}); EvilGenie \citep{gabor2026evilgenie} and \citet{ahmed2026investigating}
+use similar visible/held-out splits on competitive programming and on
+SWE-bench patches. ImpossibleBench \citep{zhong2025impossiblebench} makes
+tests contradict the specification so that any pass counts as cheating, and
+finds that stricter prompts lower the cheating rate. OverEager-Bench
+\citep{qu2026overeager} plants trap actions, such as deleting unrelated
+files, in benign tasks and finds that removing a scope statement from the
+prompt raises the rate at which agents take them. FixedBench
+\citep{gloaguen2026coding} gives agents SWE-bench issues that are already
+fixed and finds that many still edit code, often code unrelated to the
+issue. In real sessions, \citet{tang2026how} code about one in ten
+misalignment episodes as self-initiated overreach, most of it scope
+overreach.
+
+Closest to our finding, \citet{weinberger2026promptinduced} add a clause
+inviting the agent to ``clean up anything adjacent'' to an otherwise fully
+specified prompt and report that this scope-expanding wording was the only
+prompt family that consistently widened diffs, producing out-of-scope edits
+in a small share of runs for some models. Our results agree on direction and
+extend it in three ways. Our loose prompt has no explicit scope line to
+compete with, and the effect is far larger. We compare it directly with a
+vague prompt on the same repository, which produced no planted-function
+edits and far fewer out-of-scope edits of any kind. And we check the out-of-scope edits
+against hidden tests, which shows that pass/fail scoring misses nearly all of
+them. The vagueness result is not universal: UnderSpecBench
+\citep{ji2026coding} finds that less clear intent \emph{increases}
+out-of-scope actions by agents doing operations tasks in a simulated DevOps
+environment, rather than editing a small repository. Which kind of
+missing information pushes agents out of scope probably depends on what
+there is to act on. The name we use is close to the \emph{goal drift} of
+\citet{arike2025evaluating}, who measure how agents in a simulated trading
+environment abandon a goal given in the system prompt over long contexts; we
+measure the analogous failure on code, within a single bug fix.
+
+\paragraph{Underspecified requests and instruction following.}
+A separate line of work studies what models do with instructions that leave
+things out. Instruction-following benchmarks such as IFEval
+\citep{zhou2023instructionfollowing} check verifiable constraints stated in
+the prompt, whereas our question is about constraints the prompt does not
+state. In code, ClarifyGPT \citep{mu2023clarifygpt} detects ambiguous requirements
+and asks clarifying questions to improve the generated code, HumanEvalComm
+\citep{wu2025humanevalcomm} measures whether models ask such questions on
+their own, and Ambig-SWE \citep{vijayvargiya2026ambigswe} extends
+this to repository-level tasks whose issue text has been made underspecified.
+Outside code, \citet{laban2026llms} show that when a fully specified
+instruction is revealed piece by piece over several turns, models commit
+early to assumptions and lose much of their accuracy.
+These studies treat the missing information as the problem. Our vague rung is
+in the same spirit, but in our tasks missing information produced only a
+little scope creep, mostly in tests, while an explicit invitation to improve
+things produced a great deal.

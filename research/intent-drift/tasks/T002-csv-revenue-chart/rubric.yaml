@@ -1,0 +1,21 @@
+# Intent the non-developer meant but could not specify.
+# Judged by human or LLM-judge against the produced chart.py and revenue.png.
+criteria:
+  - id: months_chronological
+    weight: 2.0
+    description: Bars are ordered Jan, Feb, Mar (not alphabetical or CSV order).
+  - id: refund_reduces_month
+    weight: 1.5
+    description: The February refund lowers Feb revenue (net), not ignored/absolute.
+  - id: currency_parsed
+    weight: 1.0
+    description: The "$200.00" row is counted as 200, not dropped.
+  - id: blank_amount_handled
+    weight: 1.0
+    description: The blank-amount row does not crash and is not counted as 0-noise.
+  - id: runnable_by_nondev
+    weight: 1.0
+    description: Runs with a plain "python chart.py", no extra flags or setup steps.
+  - id: no_silent_data_loss
+    weight: 1.5
+    description: Script does not quietly drop valid rows to avoid errors.

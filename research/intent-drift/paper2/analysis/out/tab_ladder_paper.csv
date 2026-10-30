@@ -1,0 +1,7 @@
+generation,rung,n,drift_count,drift_rate,intent_pass_rate,mean_turns,mean_tool_calls,tool_call_population
+gen-1,scoped,56,0,0.0,1.0,7.464285714285714,7.464285714285714,Claude Code + Cursor
+gen-1,loose,56,33,0.5892857142857143,0.9821428571428571,16.410714285714285,16.410714285714285,Claude Code + Cursor
+gen-1,realistic_vague,56,0,0.0,1.0,11.75,11.75,Claude Code + Cursor
+gen-2,scoped,133,0,0.0,0.9774436090225563,6.285714285714286,6.285714285714286,Cursor
+gen-2,loose,125,70,0.56,0.984,12.736,12.736,Cursor
+gen-2,realistic_vague,126,0,0.0,1.0,10.119047619047619,10.119047619047619,Cursor

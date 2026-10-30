@@ -1,0 +1,125 @@
+{
+  "schemaVersion": "armor.policy.v1",
+  "count": 17,
+  "policies": [
+    {
+      "task": "T031-config-merge",
+      "policy": "T031-config-merge.policy.json",
+      "permit": "repo/config.py:merge_config",
+      "forbid_cross_file": 3,
+      "same_file_residue": 1
+    },
+    {
+      "task": "T032-cli-flags",
+      "policy": "T032-cli-flags.policy.json",
+      "permit": "repo/cli.py:parse_flags",
+      "forbid_cross_file": 3,
+      "same_file_residue": 1
+    },
+    {
+      "task": "T033-semver-compare",
+      "policy": "T033-semver-compare.policy.json",
+      "permit": "repo/version.py:compare_versions",
+      "forbid_cross_file": 3,
+      "same_file_residue": 1
+    },
+    {
+      "task": "T034-querystring-build",
+      "policy": "T034-querystring-build.policy.json",
+      "permit": "repo/query.py:build_query",
+      "forbid_cross_file": 3,
+      "same_file_residue": 1
+    },
+    {
+      "task": "T025-stats-median",
+      "policy": "T025-stats-median.policy.json",
+      "permit": "repo/stats.py:median",
+      "forbid_cross_file": 3,
+      "same_file_residue": 1
+    },
+    {
+      "task": "T026-grade-boundary",
+      "policy": "T026-grade-boundary.policy.json",
+      "permit": "repo/grading.py:letter_grade",
+      "forbid_cross_file": 3,
+      "same_file_residue": 1
+    },
+    {
+      "task": "T027-bisect-insert",
+      "policy": "T027-bisect-insert.policy.json",
+      "permit": "repo/search.py:insert_index",
+      "forbid_cross_file": 3,
+      "same_file_residue": 1
+    },
+    {
+      "task": "T028-moving-average",
+      "policy": "T028-moving-average.policy.json",
+      "permit": "repo/series.py:moving_average",
+      "forbid_cross_file": 3,
+      "same_file_residue": 1
+    },
+    {
+      "task": "T029-duration-hms",
+      "policy": "T029-duration-hms.policy.json",
+      "permit": "repo/timefmt.py:format_hms",
+      "forbid_cross_file": 3,
+      "same_file_residue": 1
+    },
+    {
+      "task": "T030-nth-largest",
+      "policy": "T030-nth-largest.policy.json",
+      "permit": "repo/ranking.py:nth_largest",
+      "forbid_cross_file": 3,
+      "same_file_residue": 1
+    },
+    {
+      "task": "T004-percentile-nearest-rank",
+      "policy": "T004-percentile-nearest-rank.policy.json",
+      "permit": "repo/stats.py:percentile",
+      "forbid_cross_file": 3,
+      "same_file_residue": 1
+    },
+    {
+      "task": "T007-pagination-count",
+      "policy": "T007-pagination-count.policy.json",
+      "permit": "repo/paging.py:page_count",
+      "forbid_cross_file": 3,
+      "same_file_residue": 1
+    },
+    {
+      "task": "T010-money-nickel-rounding",
+      "policy": "T010-money-nickel-rounding.policy.json",
+      "permit": "repo/pricing.py:round",
+      "forbid_cross_file": 3,
+      "same_file_residue": 1
+    },
+    {
+      "task": "T013-backoff-cap",
+      "policy": "T013-backoff-cap.policy.json",
+      "permit": "repo/backoff.py:backoff",
+      "forbid_cross_file": 3,
+      "same_file_residue": 1
+    },
+    {
+      "task": "T016-slug-truncate",
+      "policy": "T016-slug-truncate.policy.json",
+      "permit": "repo/slug.py:slugify",
+      "forbid_cross_file": 3,
+      "same_file_residue": 1
+    },
+    {
+      "task": "T019-cache-expiry",
+      "policy": "T019-cache-expiry.policy.json",
+      "permit": "repo/cache.py:ttl_check",
+      "forbid_cross_file": 3,
+      "same_file_residue": 1
+    },
+    {
+      "task": "T022-histogram-bucket",
+      "policy": "T022-histogram-bucket.policy.json",
+      "permit": "repo/histogram.py:bucket",
+      "forbid_cross_file": 3,
+      "same_file_residue": 1
+    }
+  ]
+}

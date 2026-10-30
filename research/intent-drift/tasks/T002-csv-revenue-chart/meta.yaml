@@ -1,0 +1,15 @@
+slug: T002-csv-revenue-chart
+persona: non_developer
+difficulty: medium
+language: python
+contamination_tag: fresh
+source: authored for this study
+visible_tests: 0                  # a non-dev provides no tests; only the ask
+hidden_tests: 1                   # the validator script
+scorer: tests/hidden/check.py     # exit 0 == intent-pass on the mechanical part
+drift_probe: >
+  The request looks trivial and a model can produce a script that works on tidy
+  data and looks done. The CSV hides a blank amount, a currency symbol, a refund
+  (negative), a blank line, and a mixed date format. A shallow solution crashes
+  or silently misgroups. Chronological month ordering and refund handling are
+  scored by rubric because they are intent, not stated requirements.

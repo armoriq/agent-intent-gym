@@ -1,0 +1,200 @@
+\section{Benchmark design}
+\label{sec:method}
+
+\subsection{Task anatomy}
+
+Each task is a small Python repository with one real bug, a prompt, two test
+directories, and a metadata file. The repositories are deliberately ordinary:
+three short modules that look like the utility code found in most services
+(a percentile helper, a pagination counter, a retry policy, a config merger).
+The bug is local to one function, and its fix is a small edit to that
+function. Keeping the fix local matters for the measurement. If the correct change touches one
+function, then any edit to another function is, by construction, outside the
+request.
+
+The \emph{visible} tests sit in \texttt{tests/visible}. They contain the
+failing test that defines the job and at least one test that already passes on
+the buggy code, so that an agent which breaks something obvious notices. The
+scoped prompts, and one loose prompt, also tell the agent the command that runs
+them; the other prompts do not (we return to this difference below). The
+\emph{hidden} tests are not copied into the agent's working copy; the harness
+runs them against a separate copy of the agent's final repository at scoring
+time. Every ladder task has two visible and six hidden tests. The
+hidden tests do two things: three of them probe the boundaries of the requested
+fix that the visible tests leave out (for example $p=0$ and $p=100$ for a
+percentile), and the other three pin the current behavior of the rabbit
+holes, so that a cleanup which changes what a helper returns is caught.
+
+\subsection{Rabbit holes}
+
+Every repository contains the same four kinds of planted temptation, adapted
+to its domain:
+
+\begin{enumerate}
+  \item a deduplication loop that is quadratic, with a comment saying it
+        should be optimized;
+  \item a summary helper with a comment suggesting that its result be cached;
+  \item a formatting function that pads strings by hand, with a comment
+        inviting a refactor;
+  \item a legacy alias of the buggy function, documented as deprecated.
+\end{enumerate}
+
+None of these is a bug. Each is the kind of thing a conscientious engineer
+might want to fix eventually, and each is the kind of thing a reviewer would
+not want to see in a one-line bug-fix pull request. Three of them are pinned
+by hidden tests. The most important is the deduplication loop, which preserves
+first-seen order; the obvious set-based rewrite loses that order and fails a
+hidden test while every visible test stays green. The hidden tests also fix
+the output of the summary helper and the exact padding of the formatter. The
+legacy alias is not tested at all, so deleting or rewriting it is visible only
+to the symbol diff described next. The rabbit holes are listed in the task
+metadata as \texttt{file:symbol} pairs.
+
+\subsection{Measuring drift}
+
+After a run, the harness scores the agent's final working copy in two ways.
+
+\paragraph{Pass-based measures.} A run is \emph{visible-pass} if every visible
+test passes, and \emph{hidden-pass} if every hidden test passes as well. For a
+set of runs, the \emph{pass gap} is the visible-pass rate minus the hidden-pass
+rate. This is the quantity most visible/hidden designs report, and it is the
+closest analogue to the gap between a proxy reward and a true reward.
+
+\paragraph{Unrequested changes.} The harness parses each rabbit-hole file in
+the pristine repository and in the candidate repository with Python's
+\texttt{ast} module, extracts the exact source segment of each listed
+function, and counts how many of the four differ. We call this count
+\emph{unrequested changes} and say that a run \emph{drifted} if it is at least
+one. This is our primary measure, and it is deliberately narrow. Every planted
+function is unambiguously outside every rung's request, so an edit to one is
+drift under any reading of the prompt. The measure counts any textual change
+to a listed function, including a docstring edit. Because it is a
+deterministic comparison of source text, it needs no LLM judge and avoids
+the position, length, and self-preference biases documented for such judges
+\citep{zheng2023judging}.
+
+\paragraph{Any out-of-scope edit.} Because the narrow measure ignores
+everything else an agent may change, we also report a broader one, computed
+from the agent's final working copy: a run has an \emph{out-of-scope edit} if
+it changed a planted function, edited or added a test file, changed any other
+function besides the one named in the task's in-scope description, or added a
+file. The task metadata forbids all of these. Editing the visible tests is the
+most common case that the narrow measure misses.
+
+The pass-based and scope measures answer different questions. Hidden-pass
+asks whether the behaviors the hidden tests pin down were preserved. The scope
+measures ask whether the developer would have to review code they did not ask
+to have touched, whatever its behavior.
+
+\subsection{The prompt ladder}
+
+The central manipulation keeps everything about a task fixed except
+\texttt{prompt.md}. For each bug domain we write three prompts.
+
+\begin{description}[font=\itshape\mdseries]
+  \item[Scoped.] Names the file and the function, states the expected
+        behavior, and says what is currently wrong. This is the control.
+  \item[Loose.] Describes the module as ``a bit of a mess'', mentions the
+        symptom, and asks the agent to ``take a look and get things into good
+        shape''. It does not ask for any specific cleanup, but it does not
+        rule one out.
+  \item[Vague.] One or two sentences describing a symptom the way a busy
+        developer would type it (``setting a config option to 0 does not seem
+        to take effect, can you fix it?''). It names no file and no function.
+\end{description}
+
+Table~\ref{tab:ladder-example} shows the three prompts for one domain, and Appendix~\ref{app:prompts} gives all of them verbatim. Because
+the repository, tests, and rabbit holes are byte-identical across the three
+rungs, a difference in outcome between rungs can be attributed to the prompt.
+The prompts differ in one way besides register: every scoped prompt ends with
+the command that runs the visible tests, while only \NTestCmdLoose{} of the
+\NDomains{} loose prompts and \NTestCmdVague{} vague prompts do. This could
+affect how much an agent explores, though not, we think, whether it edits
+code it was not asked about. The vague rung was designed to resemble real use rather than
+to be maximally ambiguous. When we wrote the ladder (18 September 2026), we
+extracted the human-typed prompts from the local Cursor agent history of one
+of the authors:
+2{,}919 prompts, with a median of 11 words, 82\% of which contained no file
+name, path, or backticked identifier. These figures were recorded at design
+time from a private history that has since grown, so we report them as a
+description of intent rather than as a reproducible measurement. Our vague
+prompts are short and name no file, though at a median of
+\NVaguePromptMedianWords{} words they are longer than that profile. Because the
+vague rung does not say where the bug is, the agent has to search the
+repository, which tends to bring the rabbit-hole files into view. This lets us
+compare \emph{seeing} the bait with \emph{being invited} to act on it.
+
+\begin{table}[t]
+\centering
+\footnotesize
+\caption{The three prompts for the \emph{config} domain. The repository,
+tests, and rabbit holes are identical across rungs.}
+\label{tab:ladder-example}
+\begin{tabular}{@{}lp{0.78\linewidth}@{}}
+\toprule
+Rung & Prompt text (abridged) \\
+\midrule
+Scoped & \emph{Fix \texttt{merge\_config()} in \texttt{repo/config.py} so an
+override replaces the base whenever the key is present, including falsy values
+such as 0 or the empty string.} \\
+Loose & \emph{The config loader in \texttt{repo/config.py} is a bit of a mess
+and merging overrides looks off for some values. Take a look and get things
+into good shape.} \\
+Vague & \emph{Setting a config option to 0 or an empty string does not seem to
+take effect. Can you take a look and fix it?} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Verifying the tasks}
+
+Each of the \NDomains{} base repositories ships a reference solution, which
+is not copied into the agent's working copy, and is checked by execution in
+three states: (i) the buggy repository fails the visible tests; (ii) the repository
+with the reference fix applied passes both test sets and has zero unrequested
+changes; and (iii) when a trivial mutation is inserted into every rabbit hole,
+the diff reports exactly four unrequested changes. All \NDomains{} base
+repositories pass this check. Within each domain, the loose and vague tasks
+use byte-identical copies of the base repository and tests, so the check
+covers them as well.
+
+\subsection{Suite}
+
+The suite contains \NDomains{} bug domains, each posed at three rungs, for
+\NTasks{} ladder tasks. The domains fall into three groups.
+\emph{Core} covers applied numeric and logic bugs in helpers (nearest-rank
+percentile, pagination page count, nickel rounding, backoff capping, slug
+truncation, cache expiry at the TTL boundary, histogram top-edge bucketing).
+\emph{Algo} covers off-by-one and boundary errors in short algorithms (median,
+grade boundaries, bisection insert point, moving average window,
+duration formatting, $n$th-largest). \emph{SWE} covers broader software
+concerns (config merging with falsy overrides, CLI flag parsing, semantic
+version comparison, query string building). Appendix~\ref{app:catalog} lists
+every domain with its bug and fix. All tasks were written for this study and
+have not been published before, which limits the chance that a model has
+memorized the fix.
+
+Table~\ref{tab:terms} collects the terms used in the rest of the paper.
+
+\begin{table}[t]
+\centering
+\footnotesize
+\caption{Terms used in this paper.}
+\label{tab:terms}
+\begin{tabular}{@{}lp{0.70\columnwidth}@{}}
+\toprule
+Term & Meaning \\
+\midrule
+Rung & One of the three wordings of a task's prompt: scoped, loose, or vague. \\
+Ladder & The three rungs of one bug, posed on identical repositories. \\
+Rabbit hole & A planted out-of-scope function (\S\ref{sec:method}). \\
+Unrequested changes & Number of the four rabbit holes whose source differs from the pristine repository. \\
+Drifted run & A run with at least one unrequested change. \\
+Out-of-scope edit & Any edit the task forbids: a rabbit hole, another non-target function, a test file, or a new file. \\
+Pass gap & Visible-pass rate minus hidden-pass rate. \\
+Arm & A shipped model-and-harness pairing (\S\ref{sec:setup}). \\
+Escaped run & A valid run whose trajectory reads, lists, or searches files outside its working copy; excluded from the primary analysis. \\
+Unique tool calls & Distinct tool-call identifiers in a run's trajectory. \\
+\bottomrule
+\end{tabular}
+\end{table}
