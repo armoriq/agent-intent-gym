@@ -1,0 +1,2 @@
+{"type":"system","subtype":"init","apiKeySource":"login","cwd":"/Users/psudokit/benchmark/runs/20260929-051120-g2-gpt-5.6-sol-T035-stats-loose-prompt-r0/work","session_id":"cde85e24-25c2-4ef2-ad16-ab18e165d0a9","model":"GPT-5.6 Sol 272K High","permissionMode":"default"}
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"The stats helpers in repo/stats.py are a bit of a mess and the median looks off on even-length inputs. Take a look and get things into good shape.\n"}]},"session_id":"cde85e24-25c2-4ef2-ad16-ab18e165d0a9"}

@@ -1,0 +1,192 @@
+  A User-Centric Framework for Benchmarking
+Token Efficiency, Guardrails and Policy Compliance
+             in Large Language Models
+
+
+
+
+  VIVEKANANDA INSTITUTE OF PROFESSIONAL STUDIES - TECHNICAL CAMPUS
+                         Grade A++ Accredited Institution by NAAC
+         NBA Accredited for MCA Programme; Recognized under Section 2(f) by UGC;
+      Affiliated to GGSIP University, Delhi; Recognized by Bar Council of India and AICTE
+                             An ISO 9001:2015 Certified Institution
+                     SCHOOL OF ENGINEERING & TECHNOLOGY
+
+
+
+                             Under the supervision of
+                            <SUPERVISOR NAME>
+
+                                            by
+                            <STUDENT NAME(S)>
+                         <ENROLMENT NUMBER(S)>
+
+
+
+                     School of Engineering & Technology
+        Vivekananda Institute of Professional Studies - Technical Campus
+                           Pitampura, Delhi - 110034
+                          Academic Session 2026-27
+                                           TABLE OF CONTENTS
+          Section                            Page   Justification
+          1. Introduction and Literature     2      Defines tokens, evaluation dimensions and the research
+          Review                                    gap.
+          2. Problem Statement and           3      States the research questions and a reproducible
+          Feasibility Study                         evaluation design.
+          3. Hardware and Software           4      Specifies the resources, deliverables, limitations and
+          Requirements                              schedule.
+          4. References                      5      Provides the scholarly and standards basis in IEEE
+                                                    format.
+
+                    1. INTRODUCTION AND LITERATURE REVIEW
+Large language models (LLMs) transform text into tokens - subword units produced by a tokenizer - and
+predict a sequence of output tokens using transformer-based attention [1], [2]. Tokens are therefore both
+computational units and billing units. Two systems may answer the same request with different token
+counts because of tokenizer design, hidden reasoning, prompt construction, context handling and response
+length. A useful comparison must consequently measure task success together with input tokens, output
+tokens, latency, cost and safety behavior rather than reporting accuracy alone.
+Existing work provides strong foundations but leaves a practical gap. HELM advocates scenario coverage
+and multiple metrics [3]. MT-Bench and Chatbot Arena use preference evaluation while documenting
+position, verbosity and self-enhancement biases in LLM judges [4]. LiveBench addresses contamination
+with refreshed, objectively scored questions [5]. Yet public leaderboards may remain unlike everyday work,
+and one aggregate rank can hide task-specific trade-offs.
+
+Research Aim
+The project will design and pilot a transparent benchmark for accessible LLMs and AI products on realistic
+tasks, token efficiency, prompt optimization, guardrails and policy compliance. It will publish prompts,
+rubrics, settings, outputs and uncertainty so results are reproducible rather than a universal rank.
+
+Objectives
+ - Create a balanced suite covering knowledge work, coding, reasoning, multilingual use, long context and
+    safety-sensitive requests.
+ - Measure quality, factuality, adherence, robustness, latency, tokens, cost, safe refusal and over-refusal.
+ - Compare baseline prompts with structured prompts and context reduction.
+ - Separate base-model effects from product, agent, tool and guardrail effects.
+
+
+
+
+Minor Project Synopsis                                                                                       Page 2 of 5
+              2. PROBLEM STATEMENT AND FEASIBILITY STUDY
+Problem Statement
+Providers and benchmark platforms use different prompts, judges, sampling settings and reporting rules.
+Static tasks may be contaminated; subjective judges may favor verbosity or their own model family; and
+products may add hidden prompts, retrieval, tools or safety filters. Thus, a leaderboard may not predict the
+most effective, economical and safe system for a real task. The problem is to expose these confounders and
+report task-level trade-offs.
+
+Research Questions
+ - RQ1: How do quality, latency, token consumption and cost vary for the same real-life task?
+ - RQ2: Do rankings change by task, language, context length and native product versus controlled API?
+ - RQ3: Which prompt/context optimizations reduce tokens without materially reducing task success?
+ - RQ4: How do guardrails affect unsafe compliance, appropriate refusal, over-refusal and stability under
+    prompt variations?
+
+Proposed Model and Product Scope
+The pilot will use exact, dated identifiers and lawful access. Candidates are Anthropic Claude (Opus, Fable
+and Sonnet), OpenAI ChatGPT/API or Codex-served variants (including accessible Luna and Terra tiers),
+Cursor Composer workflows, Zhipu GLM and Moonshot Kimi. Any '0xAlpha' entry requires verified
+identity. Composer and Composio-integrated workflows will be product/orchestration conditions, not base
+models.
+
+Experimental Design
+ - Two tracks: (A) controlled API tests with the same user prompt and matched settings where supported;
+    (B) native-product tests with default user-visible behavior.
+ - 24 tasks in six categories, three runs per task and prompt variants; eight systems yield 576 core
+    observations.
+ - Automatic checks for code, exact answers and format; blind human rubrics for open work; LLM judging
+    only as secondary evidence.
+ - Random order, anonymous labels, no self-judging, fixed rubrics, version/date logs and bootstrap
+    confidence intervals.
+ - Primary result: cost and tokens per successful task. Secondary: quality, pass rate, factual errors, p50/p95
+    latency, robustness, refusal precision and over-refusal.
+
+Hypotheses
+H1: more tokens will not always yield proportionally better outcomes. H2: no model will dominate every
+task. H3: stronger guardrails will reduce unsafe compliance but may increase over-refusal.
+
+
+
+
+Minor Project Synopsis                                                                               Page 3 of 5
+                 3. HARDWARE AND SOFTWARE REQUIREMENTS
+Feasibility Study
+Most candidates are cloud-hosted and accessible by official APIs or interfaces. A standard laptop can run
+the benchmark, logs and scoring. A small pilot, output limits, permitted caching and a pre-declared cap
+support financial feasibility. Automation plus a limited blind review supports operational feasibility. No
+model training or high-end GPU is required.
+
+Hardware Requirements
+           Component            Minimum / Recommended
+           Computer             64-bit, 4-core laptop; 8 GB RAM minimum, 16 GB recommended
+
+           Storage / Network    10 GB free storage and stable broadband
+
+           Optional             GPU only if an open-weight local baseline is added
+
+Software Requirements
+           Category             Proposed Tools
+           Runtime              Python 3.11+; official vendor SDKs or HTTPS clients
+
+           Data / analysis      JSONL/CSV, pandas, NumPy, SciPy and Jupyter
+
+           Usage logging        Provider metadata, available tokenizers and a dated price table
+
+           Evaluation           pytest/validators, rubric forms and optional secondary judge
+
+           Reproducibility      Git, lock file, run manifest and model/version timestamps
+
+           Reporting            Matplotlib/Seaborn and PDF tools
+
+Expected Outcomes
+ - An open specification, reusable tasks, scoring rubric and experiment manifest.
+ - Task/category results with confidence intervals, plus a token-quality-cost frontier.
+ - Practical guidance for model selection, prompt optimization and guardrail calibration.
+
+Limitations and Ethics
+Results will be time-bound; interfaces may not be equivalent; hidden prompts/tokenizers may be
+inaccessible; and human scoring remains subjective. The study will avoid personal data, respect provider
+terms, use synthetic safety prompts, disclose constraints and withhold harmful operational detail. Safety
+evaluation follows NIST risk-based guidance [7].
+
+Indicative Work Plan
+Weeks 1-2: review/protocol; 3-4: tasks/rubrics; 5-6: runner/pilot; 7-8: data collection; 9-10: analysis; 11-12:
+paper, repository and presentation.
+
+
+
+
+Minor Project Synopsis                                                                                Page 4 of 5
+                                              4. REFERENCES
+[1] A. Vaswani et al., "Attention Is All You Need," in Advances in Neural Information Processing Systems, vol. 30, 2017,
+    pp. 5998-6008.
+[2] T. Kudo and J. Richardson, "SentencePiece: A simple and language independent subword tokenizer and detokenizer for
+    Neural Text Processing," in Proc. 2018 Conf. Empirical Methods in Natural Language Processing: System
+    Demonstrations, Brussels, Belgium, 2018, pp. 66-71, doi: 10.18653/v1/D18-2012.
+[3] P. Liang et al., "Holistic Evaluation of Language Models," Transactions on Machine Learning Research, 2023.
+    [Online]. Available: https://arxiv.org/abs/2211.09110
+[4] L. Zheng et al., "Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena," in Advances in Neural Information
+    Processing Systems, vol. 36, 2023, pp. 46595-46623.
+[5] C. White et al., "LiveBench: A Challenging, Contamination-Free LLM Benchmark," arXiv:2406.19314, 2024.
+    [Online]. Available: https://arxiv.org/abs/2406.19314
+[6] Y. Bai et al., "Constitutional AI: Harmlessness from AI Feedback," arXiv:2212.08073, 2022. [Online]. Available:
+    https://arxiv.org/abs/2212.08073
+[7] C. Autio et al., Artificial Intelligence Risk Management Framework: Generative Artificial Intelligence Profile, NIST AI
+    600-1, National Institute of Standards and Technology, Gaithersburg, MD, USA, Jul. 2024, doi:
+    10.6028/NIST.AI.600-1.
+[8] W.-L. Chiang et al., "Chatbot Arena: An Open Platform for Evaluating LLMs by Human Preference," in Proc. 41st Int.
+    Conf. Machine Learning, Vienna, Austria, 2024, pp. 8359-8388.
+
+
+Proposed Keywords
+Large language models; tokenization; benchmarking; token efficiency; prompt optimization; guardrails;
+policy compliance; human evaluation; reproducibility.
+
+Note: The exact model versions, access routes, prices and product settings will be frozen and recorded at the start of data
+collection. This prevents later model updates from being mixed into the same experimental condition.
+
+
+
+
+Minor Project Synopsis                                                                                           Page 5 of 5
+

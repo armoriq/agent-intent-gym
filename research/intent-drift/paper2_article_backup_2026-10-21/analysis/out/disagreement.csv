@@ -1,0 +1,26 @@
+scope,n,drifted,drifted_intent_pass,drifted_intent_fail,intent_fail_among_drifted_rate,clean_intent_fail,visible_pass_intent_fail,generation,rung,arm,label
+all,552,103,102,1,0.009708737864077669,5,1,,,,
+generation,168,33,32,1,0.030303030303030304,0,1,gen-1,,,
+generation,384,70,70,0,0.0,5,0,gen-2,,,
+generation_rung,56,33,32,1,0.030303030303030304,0,1,gen-1,loose,,
+generation_rung,56,0,0,0,,0,0,gen-1,realistic_vague,,
+generation_rung,56,0,0,0,,0,0,gen-1,scoped,,
+generation_rung,125,70,70,0,0.0,2,0,gen-2,loose,,
+generation_rung,126,0,0,0,,0,0,gen-2,realistic_vague,,
+generation_rung,133,0,0,0,,3,0,gen-2,scoped,,
+generation_arm_label,21,0,0,0,,0,0,gen-1,,claude-code-opus-4-8,Opus 4.8 (Claude Code)
+generation_arm_label,21,6,6,0,0.0,0,0,gen-1,,cursor-codex-5.3,Codex 5.3
+generation_arm_label,21,4,4,0,0.0,0,0,gen-1,,cursor-composer-2.5,Composer 2.5
+generation_arm_label,21,5,5,0,0.0,0,0,gen-1,,cursor-gemini-3.x,Gemini 3.6 Flash
+generation_arm_label,21,5,5,0,0.0,0,0,gen-1,,cursor-glm-5.2,GLM 5.2
+generation_arm_label,21,2,2,0,0.0,0,0,gen-1,,cursor-gpt-5.6-sol,GPT-5.6 Sol
+generation_arm_label,21,4,4,0,0.0,0,0,gen-1,,cursor-grok-4.6,Grok 4.6
+generation_arm_label,21,7,6,1,0.14285714285714285,0,1,gen-1,,cursor-kimi-k2.7-code,Kimi K2.7
+generation_arm_label,51,15,15,0,0.0,0,0,gen-2,,g2-codex-5.3,Codex 5.3
+generation_arm_label,56,9,9,0,0.0,0,0,gen-2,,g2-composer-2.5,Composer 2.5
+generation_arm_label,20,0,0,0,,2,0,gen-2,,g2-gemini-3.8,Gemini 3.8 Flash
+generation_arm_label,51,12,12,0,0.0,0,0,gen-2,,g2-glm-5.2,GLM 5.2
+generation_arm_label,51,10,10,0,0.0,1,0,gen-2,,g2-gpt-5.6-sol,GPT-5.6 Sol
+generation_arm_label,53,8,8,0,0.0,1,0,gen-2,,g2-grok-4.7,Grok 4.7
+generation_arm_label,51,16,16,0,0.0,0,0,gen-2,,g2-kimi-k3,Kimi K3
+generation_arm_label,51,0,0,0,,1,0,gen-2,,g2-opus-5.5,Opus 5.5 (Cursor)

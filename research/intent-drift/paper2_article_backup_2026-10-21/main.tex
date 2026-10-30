@@ -1,0 +1,72 @@
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{newtxtext,newtxmath}
+\usepackage[margin=1in]{geometry}
+\usepackage[round]{natbib}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage[hidelinks]{hyperref}
+\usepackage{url}
+\usepackage{longtable}
+\usepackage{framed}
+\usepackage{placeins}
+\usepackage{siunitx}
+\newcommand{\rnd}[1]{\num[round-mode=places,round-precision=1]{#1}}
+\usepackage{fancyvrb}
+\usepackage{xspace}
+
+\captionsetup{font=small,labelfont=bf}
+\setlist{itemsep=2pt,topsep=4pt}
+
+% Every empirical number is a macro generated from db/results.db by
+% analysis/analyze.py -> analysis/out/macros.tex. \TBD marks text still waiting on data.
+\newcommand{\TBD}[1]{\textbf{[TBD: #1]}}
+\IfFileExists{analysis/out/macros.tex}{\input{analysis/out/macros.tex}}{}
+\input{sections/_paper_macros}
+\input{sections/_exec_macros}
+\input{sections/_fallbacks}
+
+\newcommand{\ie}{i.e.,\xspace}
+\newcommand{\eg}{e.g.,\xspace}
+
+\title{Asking for Cleanup Pushes Coding Agents Out of Scope:\\A Controlled Prompt Ladder with Hidden Tests}
+
+\author{
+  Pulkit Saraf\\
+  \texttt{prateeksaraf9@gmail.com}
+}
+
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\input{sections/abstract}
+\end{abstract}
+
+\input{sections/introduction}
+\input{sections/method}
+\input{sections/setup}
+\input{sections/results}
+\input{sections/discussion}
+\input{sections/related}
+\input{sections/limitations}
+\input{sections/conclusion}
+\input{sections/statements}
+
+\bibliographystyle{plainnat}
+\bibliography{refs/refs}
+
+\appendix
+\input{sections/appendix}
+
+\end{document}

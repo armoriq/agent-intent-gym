@@ -1,0 +1,34 @@
+Valid ladder runs: 552 of 637 attempts.
+gen-1 scoped: drift 0/56 (0.0%), hidden pass 56/56, mean unique tool calls 7.46.
+gen-1 loose: drift 33/56 (58.9%), hidden pass 55/56, mean unique tool calls 16.41.
+gen-1 realistic_vague: drift 0/56 (0.0%), hidden pass 56/56, mean unique tool calls 11.75.
+gen-1: 32 planted-drifted runs still passed hidden tests; 1 failed hidden tests among 33 drifted runs.
+gen-1 Cursor-only matched vague minus scoped unique tool calls: 4.35 [3.35, 5.22]; drift difference 0.0 percentage points.
+gen-2 scoped: drift 0/133 (0.0%), hidden pass 130/133, mean unique tool calls 6.29.
+gen-2 loose: drift 70/125 (56.0%), hidden pass 123/125, mean unique tool calls 12.74.
+gen-2 realistic_vague: drift 0/126 (0.0%), hidden pass 126/126, mean unique tool calls 10.12.
+gen-2: 70 planted-drifted runs still passed hidden tests; 0 failed hidden tests among 70 drifted runs.
+gen-2 Cursor-only matched vague minus scoped unique tool calls: 3.78 [3.24, 4.28]; drift difference 0.0 percentage points.
+all omnibus Q=206, domain-permutation p=9.999e-05, complete blocks=181, domains=17.
+gen-1 omnibus Q=66, domain-permutation p=0.0016998, complete blocks=56, domains=7.
+gen-2 omnibus Q=140, domain-permutation p=9.999e-05, complete blocks=125, domains=17.
+gen-1 scoped: planted all 0/56, NoEsc 0/51; any OOS all 3/56, NoEsc 0/51; test edits 3/56.
+gen-1 loose: planted all 33/56, NoEsc 31/52; any OOS all 37/56, NoEsc 35/52; test edits 17/56.
+gen-1 realistic_vague: planted all 0/56, NoEsc 0/54; any OOS all 7/56, NoEsc 7/54; test edits 7/56.
+gen-2 scoped: planted all 0/133, NoEsc 0/132; any OOS all 0/133, NoEsc 0/132; test edits 0/133.
+gen-2 loose: planted all 70/125, NoEsc 69/117; any OOS all 82/125, NoEsc 81/117; test edits 24/125.
+gen-2 realistic_vague: planted all 0/126, NoEsc 0/125; any OOS all 15/126, NoEsc 15/125; test edits 10/126.
+gen-1 Cursor all vague minus scoped unique tool calls 4.35 [3.35, 5.22].
+gen-2 Cursor all vague minus scoped unique tool calls 3.78 [3.24, 4.28].
+gen-1 Cursor NoEsc vague minus scoped unique tool calls 4.49 [3.81, 5.17].
+gen-2 Cursor NoEsc vague minus scoped unique tool calls 3.63 [3.10, 4.15].
+all all Q=206.0, p=9.999000099990002e-05, complete blocks=181.
+gen-1 all Q=66.0, p=0.0016998300169983002, complete blocks=56.
+gen-2 all Q=140.0, p=9.999000099990002e-05, complete blocks=125.
+all NoEsc Q=192.0, p=9.999000099990002e-05, complete blocks=164.
+gen-1 NoEsc Q=54.0, p=0.0016998300169983002, complete blocks=47.
+gen-2 NoEsc Q=138.0, p=9.999000099990002e-05, complete blocks=117.
+gen-1 all: 32/33 planted drifters passed hidden tests.
+gen-2 all: 70/70 planted drifters passed hidden tests.
+gen-1 NoEsc: 30/31 planted drifters passed hidden tests.
+gen-2 NoEsc: 69/69 planted drifters passed hidden tests.

@@ -1,0 +1,17 @@
+===== 23:44:55 starting cursor-composer-2.5 =====
+[cursor-composer-2.5 T003-export-limit-offbyone r0] run_id=2 metric=1 intent=1 unreq=0 files=1 wall=66s turns=None cost=None ok
+===== 23:46:01 starting cursor-kimi-k2.7-code =====
+[cursor-kimi-k2.7-code T003-export-limit-offbyone r0] run_id=3 metric=1 intent=1 unreq=0 files=1 wall=64s turns=None cost=None ok
+===== 23:47:06 starting cursor-glm-5.2 =====
+[cursor-glm-5.2 T003-export-limit-offbyone r0] run_id=4 metric=1 intent=1 unreq=0 files=1 wall=61s turns=None cost=None ok
+===== 23:48:07 starting cursor-gpt-5.6-sol =====
+[cursor-gpt-5.6-sol T003-export-limit-offbyone r0] run_id=5 metric=1 intent=1 unreq=0 files=1 wall=74s turns=14 cost=None ok
+===== 23:49:21 starting cursor-codex-5.3 =====
+[cursor-codex-5.3 T003-export-limit-offbyone r0] run_id=6 metric=1 intent=1 unreq=0 files=1 wall=85s turns=18 cost=None ok
+===== 23:50:47 starting cursor-grok-4.6 =====
+[cursor-grok-4.6 T003-export-limit-offbyone r0] run_id=7 metric=1 intent=1 unreq=0 files=1 wall=72s turns=16 cost=None ok
+===== 23:52:00 starting cursor-gemini-3.x =====
+[cursor-gemini-3.x T003-export-limit-offbyone r0] run_id=8 metric=1 intent=1 unreq=0 files=1 wall=121s turns=22 cost=None ok
+===== 23:54:01 starting claude-code-opus-4-8 =====
+[claude-code-opus-4-8 T003-export-limit-offbyone r1] run_id=9 metric=1 intent=1 unreq=0 files=1 wall=60s turns=5 cost=0.2533325 ok
+===== SWEEP DONE 23:55:01 =====

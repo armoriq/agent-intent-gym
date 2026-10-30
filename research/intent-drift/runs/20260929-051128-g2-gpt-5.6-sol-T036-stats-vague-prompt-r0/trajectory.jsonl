@@ -1,0 +1,2 @@
+{"type":"system","subtype":"init","apiKeySource":"login","cwd":"/Users/psudokit/benchmark/runs/20260929-051128-g2-gpt-5.6-sol-T036-stats-vague-prompt-r0/work","session_id":"40e7717d-05d0-4d0c-9a67-2543a3ca77ce","model":"GPT-5.6 Sol 272K High","permissionMode":"default"}
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"The median numbers in our reports look wrong on some columns. Can you take a look and fix them?\n"}]},"session_id":"40e7717d-05d0-4d0c-9a67-2543a3ca77ce"}

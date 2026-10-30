@@ -1,0 +1,12 @@
+\begin{tabular}{llllllll}
+\toprule
+generation & suite & tool call population & N & Drift (95\% CI) & Hidden pass (95\% CI) & Unreq. (95\% CI) & Tool calls (95\% CI) \\
+\midrule
+gen-1 & algo & no observations & 0 & -- & -- & -- & -- \\
+gen-1 & core & Claude Code + Cursor & 52 & 59.6\% [46.1, 71.8] & 98.1\% [89.9, 99.7] & 1.3 [0.8, 1.9] & 15.7 [15.1, 16.4] \\
+gen-1 & swe & no observations & 0 & -- & -- & -- & -- \\
+gen-2 & algo & Cursor & 41 & 70.7\% [55.5, 82.4] & 100.0\% [91.4, 100.0] & 0.7 [0.6, 0.8] & 11.0 [10.4, 11.6] \\
+gen-2 & core & Cursor & 48 & 50.0\% [36.4, 63.6] & 97.9\% [89.1, 99.6] & 0.9 [0.5, 1.4] & 12.7 [12.1, 13.4] \\
+gen-2 & swe & Cursor & 28 & 57.1\% [39.1, 73.5] & 100.0\% [87.9, 100.0] & 0.6 [0.6, 0.6] & 11.2 [10.2, 12.8] \\
+\bottomrule
+\end{tabular}

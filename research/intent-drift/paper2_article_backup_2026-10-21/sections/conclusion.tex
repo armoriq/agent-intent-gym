@@ -1,0 +1,22 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+We built a small benchmark that holds a repository, a bug, and two test sets
+fixed and changes only the wording of the request, and we measured drift both
+with hidden tests and with a function-level diff against planted
+out-of-scope temptations. Across \NConfigsDistinct{} commercial agent configurations
+from two model generations, a cleanup-flavored prompt led more than half of
+runs to edit a planted out-of-scope function, while scoped and vague prompts
+led to none, even though agents given vague prompts usually opened those
+functions' files. Nearly every one of those planted-function edits passed the
+hidden tests. Vague prompts did produce occasional smaller excursions, mostly
+edits to test files. The register of a request
+appears to matter more than its precision, and pass/fail scoring, even with
+held-out tests, does not see most of what agents do beyond the task.
+
+Several extensions would sharpen these results: sandboxed agents, a
+test-command line shared across rungs, more runs per cell, so that
+individual arms can be compared with confidence; a wider set of loose and
+vague phrasings, ideally sampled from many developers; larger repositories in
+more languages; and long, multi-step sessions, where drift may compound in
+ways that single bug fixes cannot show.

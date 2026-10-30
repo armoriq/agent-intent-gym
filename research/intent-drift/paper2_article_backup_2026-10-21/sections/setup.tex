@@ -1,0 +1,93 @@
+\section{Experimental setup}
+\label{sec:setup}
+
+\paragraph{Agents.} We evaluate commercial agents as they are shipped, that is,
+a model together with the harness that drives it. We call each such pairing an
+\emph{arm}. We do not have API-level access that would let us hold the
+scaffold fixed and swap only the model, so every claim in this paper is about
+arms, not about raw models. One arm runs Claude Opus~4.8 through the Claude
+Code command-line interface. All other arms run through \texttt{cursor-agent},
+the headless command-line client of the Cursor editor, which exposes many
+vendors' models behind a single scaffold. All Cursor arms are invoked through the same client
+with the same flags and differ only in the model flag, so differences among
+them are closer to differences between models than they would be across
+vendors' own products. We did not inspect the client's internal prompts and
+cannot rule out that it adapts them per model.
+
+We ran two generations. \emph{Generation~1} (September 2026) covers eight arms
+on the seven core domains. \emph{Generation~2} (late September and October
+2026) covers the newest model available from each vendor through Cursor, on
+the full suite. Table~\ref{tab:armlist} lists the arms with the exact model
+identifiers passed to the client. Three identifiers (Composer~2.5, GLM~5.2,
+and GPT-5.6~Sol) appear in both generations unchanged, and Codex~5.3 appears
+with a different reasoning setting, so the \NArms{} arm-generation pairs we
+analyze correspond to \NConfigsDistinct{} distinct model-and-harness
+configurations.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Agent arms. All Cursor arms share the same client and scaffold.
+Model identifiers are the strings passed to the client's model flag.}
+\label{tab:armlist}
+\begin{tabular}{@{}llll@{}}
+\toprule
+Generation & Vendor & Harness & Model identifier \\
+\midrule
+1 & Anthropic & Claude Code & \texttt{claude-opus-4-8} \\
+1 & Cursor    & cursor-agent & \texttt{composer-2.5} \\
+1 & Moonshot  & cursor-agent & \texttt{kimi-k2.7-code} \\
+1 & Zhipu     & cursor-agent & \texttt{glm-5.2-high} \\
+1 & OpenAI    & cursor-agent & \texttt{gpt-5.6-sol-high} \\
+1 & OpenAI    & cursor-agent & \texttt{gpt-5.3-codex} \\
+1 & xAI       & cursor-agent & \texttt{cursor-grok-4.6-high} \\
+1 & Google    & cursor-agent & \texttt{gemini-3.6-flash-high} \\
+\midrule
+2 & Anthropic & cursor-agent & \texttt{claude-opus-5-5-high} \\
+2 & Cursor    & cursor-agent & \texttt{composer-2.5} \\
+2 & Moonshot  & cursor-agent & \texttt{kimi-k3-high} \\
+2 & Zhipu     & cursor-agent & \texttt{glm-5.2-high} \\
+2 & OpenAI    & cursor-agent & \texttt{gpt-5.6-sol-high} \\
+2 & OpenAI    & cursor-agent & \texttt{gpt-5.3-codex-high} \\
+2 & xAI       & cursor-agent & \texttt{grok-4.7-high} \\
+2 & Google    & cursor-agent & \texttt{gemini-3.8-flash-high} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Protocol.} For each run the harness creates a fresh directory,
+copies in the task repository and the visible tests only, starts the agent
+in that directory, and invokes it non-interactively with the contents of \texttt{prompt.md}. Claude Code
+runs with permission prompts disabled and a USD~2 budget cap; Cursor runs
+with \texttt{--print --force}. The harness sets a 600-second time limit on the client process
+(\S\ref{sec:limits} discusses runs that exceeded it). No
+human intervenes between the prompt and the agent's exit. The full event
+stream is saved as the run's trajectory. When the agent exits, the harness
+restores the hidden tests into a separate copy, runs both test sets with
+\texttt{pytest}, computes the line and symbol diffs against the pristine
+repository, and writes one row per run to a SQLite database. For Cursor arms we
+count tool-call events in the trajectory as turns; Claude Code reports its
+own turn count. Turn counts are therefore comparable within a harness, and we
+use them only for within-arm contrasts. Claude Code reports cost and the
+Cursor stream does not, so we do not report cost.
+
+\paragraph{Invalid runs.} A run is valid if the harness recorded no error and
+the trajectory contains at least one tool call. The harness records an error
+when the client returns a vendor usage-cap notice, when the session ends with
+no tool calls and a transcript too short to contain an attempt, or when the
+run hits the time limit. Invalid runs are excluded from every rate.
+Without this rule such a session would be scored as a clean zero-drift run,
+since an untouched repository has no unrequested changes. Invalid runs stay in
+the database with the reason recorded, and Table~\ref{tab:coverage} reports
+how many each arm lost.
+
+\paragraph{Statistics.} Most cells are a single run ($k=1$), because of the
+usage limits of the subscriptions we had. We report proportions with Wilson
+95\% intervals, which treat runs as independent and should be read as
+descriptive, since runs on the same domain are related. Differences and means
+use a task-level bootstrap (10{,}000 resamples, fixed seed). The ladder effect is tested with Cochran's $Q$ on complete three-rung
+blocks (one arm on one domain), with the $p$-value taken from 10{,}000
+permutations of rung labels within domain, applied identically to every arm
+of that domain, so that agents solving the same domain are not treated as
+independent. Since the same repository appears under all three rungs, we also
+report paired comparisons within arm and domain.

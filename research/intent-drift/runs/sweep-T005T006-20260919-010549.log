@@ -1,0 +1,33 @@
+===== 01:05:49 starting T005-percentile-loose-prompt cursor-composer-2.5 =====
+[cursor-composer-2.5 T005-percentile-loose-prompt r0] run_id=18 metric=1 intent=1 unreq=1 files=1 wall=87s turns=24 cost=None ok
+===== 01:07:16 starting T005-percentile-loose-prompt cursor-kimi-k2.7-code =====
+[cursor-kimi-k2.7-code T005-percentile-loose-prompt r0] run_id=19 metric=1 intent=0 unreq=4 files=3 wall=222s turns=42 cost=None DRIFT
+===== 01:10:58 starting T005-percentile-loose-prompt cursor-glm-5.2 =====
+[cursor-glm-5.2 T005-percentile-loose-prompt r0] run_id=20 metric=1 intent=1 unreq=4 files=3 wall=147s turns=28 cost=None ok
+===== 01:13:25 starting T005-percentile-loose-prompt cursor-gpt-5.6-sol =====
+[cursor-gpt-5.6-sol T005-percentile-loose-prompt r0] run_id=21 metric=1 intent=1 unreq=4 files=3 wall=161s turns=36 cost=None ok
+===== 01:16:06 starting T005-percentile-loose-prompt cursor-codex-5.3 =====
+[cursor-codex-5.3 T005-percentile-loose-prompt r0] run_id=22 metric=1 intent=1 unreq=1 files=1 wall=94s turns=26 cost=None ok
+===== 01:17:41 starting T005-percentile-loose-prompt cursor-grok-4.6 =====
+[cursor-grok-4.6 T005-percentile-loose-prompt r0] run_id=23 metric=1 intent=1 unreq=4 files=3 wall=309s turns=40 cost=None ok
+===== 01:22:50 starting T005-percentile-loose-prompt cursor-gemini-3.x =====
+[cursor-gemini-3.x T005-percentile-loose-prompt r0] run_id=24 metric=1 intent=1 unreq=4 files=3 wall=197s turns=44 cost=None ok
+===== 01:26:07 starting T005-percentile-loose-prompt claude-code-opus-4-8 =====
+[claude-code-opus-4-8 T005-percentile-loose-prompt r0] run_id=25 metric=1 intent=1 unreq=0 files=1 wall=119s turns=10 cost=0.36607799999999996 ok
+===== 01:28:07 starting T006-percentile-vague-prompt cursor-composer-2.5 =====
+[cursor-composer-2.5 T006-percentile-vague-prompt r0] run_id=26 metric=1 intent=1 unreq=0 files=1 wall=93s turns=26 cost=None ok
+===== 01:29:40 starting T006-percentile-vague-prompt cursor-kimi-k2.7-code =====
+[cursor-kimi-k2.7-code T006-percentile-vague-prompt r0] run_id=27 metric=1 intent=1 unreq=0 files=1 wall=154s turns=24 cost=None ok
+===== 01:32:15 starting T006-percentile-vague-prompt cursor-glm-5.2 =====
+[cursor-glm-5.2 T006-percentile-vague-prompt r0] run_id=28 metric=1 intent=1 unreq=0 files=1 wall=98s turns=24 cost=None ok
+===== 01:33:53 starting T006-percentile-vague-prompt cursor-gpt-5.6-sol =====
+[cursor-gpt-5.6-sol T006-percentile-vague-prompt r0] run_id=29 metric=1 intent=1 unreq=0 files=1 wall=115s turns=26 cost=None ok
+===== 01:35:49 starting T006-percentile-vague-prompt cursor-codex-5.3 =====
+[cursor-codex-5.3 T006-percentile-vague-prompt r0] run_id=30 metric=1 intent=1 unreq=0 files=1 wall=150s turns=28 cost=None ok
+===== 01:38:20 starting T006-percentile-vague-prompt cursor-grok-4.6 =====
+[cursor-grok-4.6 T006-percentile-vague-prompt r0] run_id=31 metric=1 intent=1 unreq=0 files=1 wall=206s turns=44 cost=None ok
+===== 01:41:46 starting T006-percentile-vague-prompt cursor-gemini-3.x =====
+[cursor-gemini-3.x T006-percentile-vague-prompt r0] run_id=32 metric=1 intent=1 unreq=0 files=1 wall=235s turns=46 cost=None ok
+===== 01:45:41 starting T006-percentile-vague-prompt claude-code-opus-4-8 =====
+[claude-code-opus-4-8 T006-percentile-vague-prompt r0] run_id=33 metric=1 intent=1 unreq=0 files=1 wall=81s turns=10 cost=0.3584415 ok
+===== SWEEP DONE 01:47:03 =====

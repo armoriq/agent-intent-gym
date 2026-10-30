@@ -1,0 +1,89 @@
+\section{Introduction}
+\label{sec:intro}
+
+A coding agent is usually judged by whether the tests pass when it stops.
+Benchmarks such as HumanEval \citep{chen2021evaluating} and SWE-bench
+\citep{jimenez2024swebench} made this the standard, and with good reason: a
+test suite is cheap to run, hard to argue with, and easy to compare across
+systems. But a passing suite is a stand-in for what the developer wanted,
+which is narrower and harder to write down. The developer wanted one specific
+change, made correctly, with nothing else in the repository disturbed. An agent
+can satisfy the suite and still miss that intent, for example by rewriting a
+helper nobody asked about or by deleting a deprecated function that a
+downstream caller still uses. This is an instance of a familiar pattern, in which a
+measure that stands in for a goal stops tracking it once systems are pushed to
+satisfy the measure \citep{manheim2018categorizing}; the reinforcement
+learning literature documents many agents that satisfied a proxy while
+missing the goal behind it
+\citep{krakovna2020specification,pan2022effects}.
+
+We call the coding-agent version of this gap \emph{intent drift}: the agent's
+change goes beyond, or departs from, what the request licensed, while the
+signal the agent can observe still looks fine. This paper asks a practical
+question about it. \emph{What, in the request itself, makes an agent drift?}
+Prior work has studied contamination \citep{riddell2024quantifying,matton2024leakage}, test weakness
+\citep{liu2023evalplus,aleithan2024swebench}, and deliberate test tampering by agents
+\citep{zhong2025impossiblebench}, and each of these confounds the others when one only
+looks at final pass rates. We therefore hold the repository, the bug, and both
+test sets fixed, and vary only the wording of the prompt.
+
+Our instrument has three parts. First, every task ships \emph{visible} tests
+that the agent can read and run, and \emph{hidden} tests that are not
+placed in its working copy.
+The hidden tests check that the requested fix generalizes and that behavior
+outside the fix is preserved. Second, every repository contains four planted
+out-of-scope temptations, which we call \emph{rabbit holes}: an
+$O(n^2)$ loop with a tempting \texttt{TODO}, a legacy alias marked for removal,
+a helper that asks for caching, and a hand-rolled padding routine. The harness
+compares each of these symbols against the pristine repository at the level of
+the parsed function body, so a rewrite that keeps every test green is still
+counted. Third, each bug is posed under three prompts that differ only in
+register: a \emph{scoped} prompt that names the file, the function, and the
+fix; a \emph{loose} prompt that describes the area as messy and asks the agent
+to ``get things into good shape''; and a \emph{vague} prompt that reports a
+symptom in one or two sentences and names no file. The vague rung is
+calibrated against 2{,}919 prompts the first author actually typed to a coding
+agent over several months (median 11 words; 82\% name no file or symbol).
+
+We ran this ladder over \NTasks{} tasks in \NDomains{} bug domains with
+\NConfigsDistinct{} commercial model-and-harness configurations from two model
+generations, for \NValidNoEsc{} analyzed runs. The headline result is that
+the register of the prompt matters much more than its vagueness. Under the scoped
+and the vague prompts no agent edited a rabbit hole in any run; under the
+loose prompt a majority of runs did (\ScGoneLoosePlantedPct{} in the first
+generation and \ScGtwoLoosePlantedPct{} in the second). Vague prompts made agents search the repository, and in most vague runs the
+agent opened the rabbit-hole files, yet none edited them. Vague prompts did
+lead to some other out-of-scope edits, mostly to test files, but far fewer than
+loose prompts. The hidden tests caught far fewer of these
+excursions than the symbol diff did, which says something about how much a
+pass/fail oracle can see.
+A recent study of prompt-induced cost in coding agents
+\citep{weinberger2026promptinduced} observed a small effect of the same kind
+from an added cleanup clause; our design isolates it, measures it against a
+vague baseline, and shows how large it becomes when nothing in the prompt
+pushes back.
+
+\paragraph{Contributions.}
+\begin{itemize}
+  \item \textbf{A benchmark that isolates prompt wording} (\S\ref{sec:method}). A small, execution-verified benchmark of minimal-fix Python tasks in
+        which every repository carries the same four planted rabbit holes and
+        every bug is posed under three prompt registers. Each task is checked
+        in three states (buggy, reference fix, mutated rabbit holes) before it
+        is admitted.
+  \item \textbf{A scope measure that pass rates miss} (\S\ref{sec:results}). A function-level drift measure, \emph{unrequested changes}, reported
+        alongside the conventional visible-minus-hidden gap, and evidence that
+        the two disagree on the same runs: \DgDriftedHiddenPass{} of
+        \DgDrifted{} drifted runs passed every hidden test.
+  \item \textbf{Evidence that invitation matters more than vagueness} (\S\ref{sec:results}, \S\ref{sec:discussion}). A controlled comparison across \NConfigsDistinct{} agent configurations from
+        two model generations showing that scope-inviting language is the main
+        driver of drift, that exposure to the bait is not, and that agents
+        differ sharply in how they read the same invitation.
+\end{itemize}
+
+\input{sections/teaser}
+
+All task files, the harness, the raw agent trajectories and final working
+copies, and a frozen snapshot of the results database are released with the
+paper. Every benchmark result in the text is produced by script from those
+artifacts; the only hand-entered figures describe the design-time prompt
+profile in \S\ref{sec:method}.

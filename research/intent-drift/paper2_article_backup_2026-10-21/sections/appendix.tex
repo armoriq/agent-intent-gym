@@ -1,0 +1,53 @@
+\section{Task catalog}
+\label{app:catalog}
+
+\input{sections/appendix_catalog}
+
+\clearpage
+\section{Prompts}
+\label{app:prompts}
+
+Every prompt given to the agents, reproduced verbatim from each task's
+\texttt{prompt.md}. Each domain appears at three rungs; the repository and the
+tests are the same across the three.
+
+\input{sections/appendix_prompts}
+
+\clearpage
+\section{Coverage and excluded runs}
+\label{app:coverage}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Runs per arm on the ladder tasks. \emph{Invalid}: the harness recorded
+an error (usage cap, empty session, or timeout) or the trajectory has no tool
+calls. \emph{Escaped}: valid runs whose trajectory attempts to read, list, or
+search benchmark files outside the working copy; these are excluded from the primary analysis.}
+\label{tab:coverage}
+\input{sections/_coverage_table}
+\end{table}
+
+\FloatBarrier
+\clearpage
+\section{Drift by domain}
+\label{app:domains}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\linewidth]{analysis/out/fig_domains.pdf}
+\caption{Loose-rung drift rate by domain and generation, with Wilson 95\%
+intervals, on all valid runs. Generation~1 covers the seven core domains only.}
+\label{fig:domains}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.78\linewidth]{analysis/out/fig_heat_domains.pdf}
+\caption{Share of runs per domain and rung, pooled over arms and generations
+and excluding escaped runs, that edited a planted function (left) or a test
+file (right). Horizontal rules separate the \emph{core}, \emph{algo}, and
+\emph{swe} suites. Planted edits occur only on the loose rung in every domain;
+test-file edits also appear on the vague rung in some domains.}
+\label{fig:heat-domains}
+\end{figure}

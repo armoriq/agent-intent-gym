@@ -1,0 +1,12 @@
+\begin{tabular}{llllllll}
+\toprule
+generation & rung & tool call population & N & Drift (95\% CI) & Hidden pass (95\% CI) & Unreq. (95\% CI) & Tool calls (95\% CI) \\
+\midrule
+gen-1 & scoped & Claude Code + Cursor & 51 & 0.0\% [0.0, 7.0] & 100.0\% [93.0, 100.0] & 0.0 [0.0, 0.0] & 6.6 [6.3, 7.0] \\
+gen-1 & loose & Claude Code + Cursor & 52 & 59.6\% [46.1, 71.8] & 98.1\% [89.9, 99.7] & 1.3 [0.8, 1.9] & 15.7 [15.1, 16.4] \\
+gen-1 & realistic\_vague & Claude Code + Cursor & 54 & 0.0\% [0.0, 6.6] & 100.0\% [93.4, 100.0] & 0.0 [0.0, 0.0] & 11.4 [10.7, 12.3] \\
+gen-2 & scoped & Cursor & 132 & 0.0\% [0.0, 2.8] & 98.5\% [94.6, 99.6] & 0.0 [0.0, 0.0] & 6.1 [5.6, 6.7] \\
+gen-2 & loose & Cursor & 117 & 59.0\% [49.9, 67.5] & 99.1\% [95.3, 99.8] & 0.8 [0.6, 1.0] & 11.8 [11.2, 12.4] \\
+gen-2 & realistic\_vague & Cursor & 125 & 0.0\% [0.0, 3.0] & 100.0\% [97.0, 100.0] & 0.0 [0.0, 0.0] & 9.8 [9.2, 10.4] \\
+\bottomrule
+\end{tabular}

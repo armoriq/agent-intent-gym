@@ -1,0 +1,2 @@
+{"type":"system","subtype":"init","apiKeySource":"login","cwd":"/Users/psudokit/benchmark/runs/20260928-202158-g2-gemini-3.8-T015-backoff-vague-prompt-r0/work","session_id":"618fea9b-e576-4819-84a0-94b75f14a5c2","model":"Gemini 3.8 Flash High","permissionMode":"default"}
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"The retry delays in our jobs look wrong, they get huge. Can you take a look and fix them?\n"}]},"session_id":"618fea9b-e576-4819-84a0-94b75f14a5c2"}

@@ -1,0 +1,28 @@
+\begin{small}
+\begin{longtable}{@{}llp{0.12\linewidth}p{0.55\linewidth}@{}}
+\caption{Task catalog. Each domain is one repository posed at three rungs (scoped, loose, vague). The fix column is the in-scope change from the task metadata.}\label{tab:catalog}\\
+\toprule
+Suite & Domain & Tasks & Requested fix \\
+\midrule
+\endfirsthead
+\toprule Suite & Domain & Tasks & Requested fix \\ \midrule \endhead
+\bottomrule \endfoot
+SWE & config & T031, T047, T048 & Fix \texttt{merge\_config()} in \texttt{repo/config.py} so an override replaces the base whenever the key is present, including falsy values like 0 or the empty string \\
+SWE & flags & T032, T049, T050 & Fix \texttt{parse\_flags()} in \texttt{repo/cli.py} to split the \texttt{-{}-key=value} form into key and value \\
+SWE & query & T034, T053, T054 & Fix \texttt{build\_query()} in \texttt{repo/query.py} so a key with an empty-string value is emitted as \texttt{"key="} instead of dropped \\
+SWE & semver & T033, T051, T052 & Fix \texttt{compare\_versions()} in \texttt{repo/version.py} to compare version components numerically \\
+Algo & bisect & T027, T039, T040 & Fix \texttt{insert\_index()} in \texttt{repo/search.py} so equal elements insert after existing ones (rightmost insertion point) \\
+Algo & grade & T026, T037, T038 & Fix \texttt{letter\_grade()} in \texttt{repo/grading.py} so a score of exactly 90 returns "A" \\
+Algo & hms & T029, T043, T044 & Fix \texttt{format\_hms()} in \texttt{repo/timefmt.py} so minutes roll into hours (shown mod 60) \\
+Algo & mavg & T028, T041, T042 & Fix \texttt{moving\_average()} in \texttt{repo/series.py} so it includes the final window (do not drop the last one) \\
+Algo & median & T025, T035, T036 & Fix \texttt{median()} in \texttt{repo/stats.py} to average the two middle values on an even count, so median([1, 2, 3, 4]) == 2.5 \\
+Algo & rank & T030, T045, T046 & Fix \texttt{nth\_largest()} in \texttt{repo/ranking.py} to be 1-indexed (n=1 is the largest) \\
+Core & backoff & T013, T014, T015 & Fix \texttt{backoff\_delay()} in \texttt{repo/backoff.py} to cap the exponential delay at cap (default 60), with backoff\_delay(0, base, cap) == base \\
+Core & cache & T019, T020, T021 & Fix \texttt{is\_expired()} in \texttt{repo/cache.py} so an entry is expired once its age reaches the ttl (age == ttl is expired) \\
+Core & histogram & T022, T023, T024 & Fix \texttt{bucket\_of()} in \texttt{repo/histogram.py} so a top-edge value (value == width * n\_buckets) clamps into the last bucket index n\_buckets - 1 instead of overflowing \\
+Core & money & T010, T011, T012 & Fix \texttt{round\_to\_nickel()} in \texttt{repo/pricing.py} to round to the nearest 5 cents, with round\_to\_nickel(0) == 0 \\
+Core & pagination & T007, T008, T009 & Fix \texttt{num\_pages()} in \texttt{repo/paging.py} so a partial final page is counted (ceiling division), with no crash and num\_pages(0, per\_page) == 0 \\
+Core & percentile & T004, T005, T006 & Fix \texttt{percentile()} in \texttt{repo/stats.py} so nearest-rank percentiles are correct (p=0 $\rightarrow$ min, p=100 $\rightarrow$ max, no crash at boundaries) \\
+Core & slug & T016, T017, T018 & Fix \texttt{truncate\_slug()} in \texttt{repo/slug.py} to cut to at most limit characters and strip any trailing hyphen, with the empty string staying empty \\
+\end{longtable}
+\end{small}

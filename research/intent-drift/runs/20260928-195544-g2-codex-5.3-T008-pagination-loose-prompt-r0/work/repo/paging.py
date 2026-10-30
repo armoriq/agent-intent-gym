@@ -1,0 +1,32 @@
+"""Pagination math for the export API."""
+
+
+def num_pages(total, per_page):
+    """Number of pages needed to show `total` rows at `per_page` rows each.
+
+    A partial final page still counts as a page: 101 rows at 10 per page is 11
+    pages, not 10.
+    """
+    _validate_paging(total, per_page)
+    full_pages, remainder = divmod(total, per_page)
+    return full_pages + (1 if remainder else 0)
+
+
+def last_page_start(total, per_page):
+    """Return the 0-based start offset for the final page, or None if empty."""
+    pages = num_pages(total, per_page)
+    if pages == 0:
+        return None
+    return (pages - 1) * per_page
+
+
+def _validate_paging(total, per_page):
+    if total < 0:
+        raise ValueError("total must be non-negative")
+    if per_page <= 0:
+        raise ValueError("per_page must be positive")
+
+
+def old_page_count(total, per_page):
+    # TODO: legacy helper for the v1 export UI. Remove once v1 is retired.
+    return num_pages(total, per_page)

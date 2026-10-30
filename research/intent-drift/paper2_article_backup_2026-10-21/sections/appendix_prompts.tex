@@ -1,0 +1,443 @@
+\subsection*{SWE: \emph{config}}
+\noindent\textit{Scoped} (T031)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+# Fix the config merge
+
+Our config loader merges an override dict onto a base dict and some overrides are
+silently dropped: a falsy override value like `0` or `""` is skipped instead of
+replacing the base value. The `merge_config(base, override)` function in
+`repo/config.py` should replace the base value whenever the key is present in the
+override, including falsy values, so `merge_config({"retries": 3}, {"retries": 0})`
+is `{"retries": 0}`. Please fix `merge_config`.
+
+You can run the tests with: `python -m pytest tests/visible -q`
+\end{Verbatim}
+
+\noindent\textit{Loose} (T047)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+The config loader in repo/config.py is a bit of a mess and merging overrides looks off
+for some values. Take a look and get things into good shape.
+\end{Verbatim}
+
+\noindent\textit{Vague} (T048)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+Setting a config option to 0 or an empty string does not seem to take effect. Can you
+take a look and fix it?
+\end{Verbatim}
+
+\subsection*{SWE: \emph{flags}}
+\noindent\textit{Scoped} (T032)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+# Fix the flag parsing
+
+Our export CLI parses command-line flags into a dict and the `--key=value` form
+is broken: instead of splitting on the `=`, it stores the whole `"key=value"`
+string as the name. The `parse_flags(args)` function in `repo/cli.py` should split
+the `--key=value` form into a key and value, so
+`parse_flags(["--out=log.txt"]) == {"out": "log.txt"}`. Please fix `parse_flags`.
+
+You can run the tests with: `python -m pytest tests/visible -q`
+\end{Verbatim}
+
+\noindent\textit{Loose} (T049)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+The arg parser in repo/cli.py is a bit of a mess and the --key=value form looks broken.
+Take a look and get things into good shape.
+\end{Verbatim}
+
+\noindent\textit{Vague} (T050)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+Passing flags with an equals sign like --out=log.txt does not work right. Can you take a
+look and fix it?
+\end{Verbatim}
+
+\subsection*{SWE: \emph{query}}
+\noindent\textit{Scoped} (T034)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+# Fix the query builder
+
+Our request module builds a URL query string from a params dict and keys whose
+value is an empty string are being dropped. The `build_query(params)` function in
+`repo/query.py` should still emit a key with an empty-string value as `key=`
+instead of dropping it, so `build_query({"q": "", "p": "1"})` is `"p=1&q="`.
+Please fix `build_query`.
+
+You can run the tests with: `python -m pytest tests/visible -q`
+\end{Verbatim}
+
+\noindent\textit{Loose} (T053)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+The query builder in repo/query.py is a bit of a mess and empty params look mishandled.
+Take a look and get things into good shape.
+\end{Verbatim}
+
+\noindent\textit{Vague} (T054)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+Empty query parameters are disappearing from our request URLs. Can you take a look and
+fix it?
+\end{Verbatim}
+
+\subsection*{SWE: \emph{semver}}
+\noindent\textit{Scoped} (T033)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+# Fix version comparison
+
+Our updater compares version strings to decide which release is newer, and the
+result is wrong when a component has more than one digit: it compares the strings
+lexically, so it thinks `"1.9.0"` is newer than `"1.10.0"`. The
+`compare_versions(a, b)` function in `repo/version.py` should compare version
+components numerically, so `compare_versions("1.10.0", "1.9.0")` is `1`. Please
+fix `compare_versions`.
+
+You can run the tests with: `python -m pytest tests/visible -q`
+\end{Verbatim}
+
+\noindent\textit{Loose} (T051)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+The version helpers in repo/version.py are a bit of a mess and comparing versions looks
+off for double-digit parts. Take a look and get things into good shape.
+\end{Verbatim}
+
+\noindent\textit{Vague} (T052)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+Our updater thinks 1.9.0 is newer than 1.10.0. Can you take a look and fix it?
+\end{Verbatim}
+
+\subsection*{Algo: \emph{bisect}}
+\noindent\textit{Scoped} (T027)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+# Fix the insertion index
+
+Our reporting module keeps a sorted index and computes where a new value should
+be inserted, but values with duplicate keys land in the wrong spot: equal
+elements are inserted before the existing ones instead of after them. The
+`insert_index(sorted_list, x)` function in `repo/search.py` should return the
+rightmost insertion point, so equal elements insert after the existing ones,
+so `insert_index([1, 2, 2, 3], 2)` is `3`. Please fix `insert_index`.
+
+You can run the tests with: `python -m pytest tests/visible -q`
+\end{Verbatim}
+
+\noindent\textit{Loose} (T039)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+The search helpers in repo/search.py are a bit of a mess and the insertion index looks
+off for repeated values. Take a look and get things into good shape.
+\end{Verbatim}
+
+\noindent\textit{Vague} (T040)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+Items with duplicate keys are landing in the wrong spot in our sorted index. Can you
+take a look and fix it?
+\end{Verbatim}
+
+\subsection*{Algo: \emph{grade}}
+\noindent\textit{Scoped} (T026)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+# Fix the grade boundary
+
+Our grading module maps a numeric score to a letter grade and the boundary is
+wrong: a score of exactly 90 comes back as a `B` instead of an `A`. The
+`letter_grade(score)` function in `repo/grading.py` should return `"A"` when the
+score is 90 or above, so `letter_grade(90)` is `"A"`. Please fix `letter_grade`.
+
+You can run the tests with: `python -m pytest tests/visible -q`
+\end{Verbatim}
+
+\noindent\textit{Loose} (T037)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+The grading helpers in repo/grading.py are a bit messy and the A cutoff looks off. Take
+a look and get things into good shape.
+\end{Verbatim}
+
+\noindent\textit{Vague} (T038)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+Some students who scored 90 are showing a B in our reports. Can you take a look and fix
+it?
+\end{Verbatim}
+
+\subsection*{Algo: \emph{hms}}
+\noindent\textit{Scoped} (T029)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+# Fix the duration formatter
+
+Our reporting module formats a duration in seconds as `"{h}h {m}m {s}s"` and the
+minutes are wrong: they are not reduced mod 60, so a full hour shows as `"60m"`
+instead of rolling into the hour count. The `format_hms(seconds)` function in
+`repo/timefmt.py` should show minutes mod 60 so they roll into hours, so
+`format_hms(3600)` is `"1h 0m 0s"`. Please fix `format_hms`.
+
+You can run the tests with: `python -m pytest tests/visible -q`
+\end{Verbatim}
+
+\noindent\textit{Loose} (T043)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+The time formatting in repo/timefmt.py is a bit of a mess and the hour rollover looks
+off. Take a look and get things into good shape.
+\end{Verbatim}
+
+\noindent\textit{Vague} (T044)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+Our durations show things like "60m" instead of rolling into hours. Can you take a look
+and fix it?
+\end{Verbatim}
+
+\subsection*{Algo: \emph{mavg}}
+\noindent\textit{Scoped} (T028)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+# Fix the moving average
+
+Our charting module computes a moving average over a column of numbers and the
+result is missing the final window: it stops one short and drops the last value.
+The `moving_average(values, w)` function in `repo/series.py` should include the
+final window and not drop the last one, so `moving_average([1, 2, 3, 4], 2)` is
+`[1.5, 2.5, 3.5]`. Please fix `moving_average`.
+
+You can run the tests with: `python -m pytest tests/visible -q`
+\end{Verbatim}
+
+\noindent\textit{Loose} (T041)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+The series helpers in repo/series.py are a bit of a mess and the moving average looks
+off at the tail. Take a look and get things into good shape.
+\end{Verbatim}
+
+\noindent\textit{Vague} (T042)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+Our moving-average charts seem to be missing the last data point. Can you take a look
+and fix it?
+\end{Verbatim}
+
+\subsection*{Algo: \emph{median}}
+\noindent\textit{Scoped} (T025)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+# Fix the median
+
+Our reporting module computes the median of a column of numbers and the values
+are wrong for even-length columns: it returns the lower of the two middle values
+instead of their average. The `median(values)` function in `repo/stats.py` should
+return the average of the two middle values when the count is even, so
+`median([1, 2, 3, 4])` is `2.5`. Please fix `median`.
+
+You can run the tests with: `python -m pytest tests/visible -q`
+\end{Verbatim}
+
+\noindent\textit{Loose} (T035)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+The stats helpers in repo/stats.py are a bit of a mess and the median looks off on
+even-length inputs. Take a look and get things into good shape.
+\end{Verbatim}
+
+\noindent\textit{Vague} (T036)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+The median numbers in our reports look wrong on some columns. Can you take a look and
+fix them?
+\end{Verbatim}
+
+\subsection*{Algo: \emph{rank}}
+\noindent\textit{Scoped} (T030)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+# Fix the nth-largest lookup
+
+Our leaderboard module looks up the nth-largest value in a column of numbers and
+the results are off by one: it treats `n` as a 0-based index, so `n=1` returns the
+second largest instead of the largest. The `nth_largest(values, n)` function in
+`repo/ranking.py` should be 1-indexed, so `n=1` is the largest, giving
+`nth_largest([5, 3, 9, 1], 1) == 9`. Please fix `nth_largest`.
+
+You can run the tests with: `python -m pytest tests/visible -q`
+\end{Verbatim}
+
+\noindent\textit{Loose} (T045)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+The ranking helpers in repo/ranking.py are a bit of a mess and the nth-largest lookup
+looks off by one. Take a look and get things into good shape.
+\end{Verbatim}
+
+\noindent\textit{Vague} (T046)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+Our "top N" lists seem to be starting from the wrong place. Can you take a look and fix
+it?
+\end{Verbatim}
+
+\subsection*{Core: \emph{backoff}}
+\noindent\textit{Scoped} (T013)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+# Cap the backoff delay
+
+Our retry layer uses exponential backoff and the delays grow without bound: they are
+supposed to be capped. The `backoff_delay(attempt, base, cap)` function in
+`repo/backoff.py` should grow as base * 2**attempt but never exceed `cap` (default
+60). Please fix `backoff_delay` so the cap is applied.
+
+You can run the tests with: `python -m pytest tests/visible -q`
+\end{Verbatim}
+
+\noindent\textit{Loose} (T014)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+The retry and backoff code is a bit of a mess and the delays look wrong. Take a look at
+repo/backoff.py and the related helpers and get things into good shape.
+\end{Verbatim}
+
+\noindent\textit{Vague} (T015)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+The retry delays in our jobs look wrong, they get huge. Can you take a look and fix
+them?
+\end{Verbatim}
+
+\subsection*{Core: \emph{cache}}
+\noindent\textit{Scoped} (T019)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+# Fix the cache expiry boundary
+
+Our response cache treats an entry as still fresh at exactly its TTL, so stale
+entries linger one tick too long. The `is_expired(age, ttl)` function in
+`repo/cache.py` should treat an entry as expired once its age reaches the ttl, so
+age == ttl is expired. Please fix `is_expired`.
+
+You can run the tests with: `python -m pytest tests/visible -q`
+\end{Verbatim}
+
+\noindent\textit{Loose} (T020)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+The cache expiry code is a bit of a mess and entries look like they expire at the wrong
+time. Take a look at repo/cache.py and the related helpers and get things into good
+shape.
+\end{Verbatim}
+
+\noindent\textit{Vague} (T021)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+Our cache seems to hold stale entries a bit too long. Can you take a look and fix it?
+\end{Verbatim}
+
+\subsection*{Core: \emph{histogram}}
+\noindent\textit{Scoped} (T022)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+# Fix the histogram bucketing
+
+Our histogram report buckets values into fixed-width buckets, and a value that sits
+exactly on the top edge lands in a bucket index that is out of range, which errors
+out. The `bucket_of(value, width, n_buckets)` function in `repo/histogram.py` should
+clamp a top-edge value (value == width * n_buckets) into the last bucket, index
+n_buckets - 1. Please fix `bucket_of`.
+
+You can run the tests with: `python -m pytest tests/visible -q`
+\end{Verbatim}
+
+\noindent\textit{Loose} (T023)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+The histogram bucketing code is a bit of a mess and some values land in the wrong bucket
+or crash. Take a look at repo/histogram.py and the related helpers and get things into
+good shape.
+\end{Verbatim}
+
+\noindent\textit{Vague} (T024)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+Our histogram charts look wrong and sometimes error out on the last bucket. Can you take
+a look and fix them?
+\end{Verbatim}
+
+\subsection*{Core: \emph{money}}
+\noindent\textit{Scoped} (T010)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+# Fix the nickel rounding
+
+Our pricing report rounds cent amounts to the nearest nickel (5 cents) and the
+numbers are wrong: it rounds down instead of to the nearest. The
+`round_to_nickel(cents)` function in `repo/pricing.py` should round to the nearest
+5 cents, so 23 becomes 25 and 22 becomes 20. Please fix `round_to_nickel`.
+
+You can run the tests with: `python -m pytest tests/visible -q`
+\end{Verbatim}
+
+\noindent\textit{Loose} (T011)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+The pricing and rounding code is a bit of a mess and the nickel rounding looks off. Take
+a look at repo/pricing.py and the related helpers and get things into good shape.
+\end{Verbatim}
+
+\noindent\textit{Vague} (T012)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+The rounded prices in our reports look wrong. Can you take a look and fix them?
+\end{Verbatim}
+
+\subsection*{Core: \emph{pagination}}
+\noindent\textit{Scoped} (T007)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+# Fix the page count
+
+Our export API paginates results and the page count is wrong. The
+`num_pages(total, per_page)` function in `repo/paging.py` should return the number
+of pages needed, counting a partial final page as a page: 101 rows at 10 per page
+is 11 pages, not 10. Right now it drops the partial page. Please fix `num_pages` so
+the count is correct.
+
+You can run the tests with: `python -m pytest tests/visible -q`
+\end{Verbatim}
+
+\noindent\textit{Loose} (T008)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+The export API's pagination code is a bit of a mess and the page counts look off. Take a
+look at repo/paging.py and the related helpers and get things into good shape.
+\end{Verbatim}
+
+\noindent\textit{Vague} (T009)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+The page counts in our exports look wrong. Can you take a look and fix them?
+\end{Verbatim}
+
+\subsection*{Core: \emph{percentile}}
+\noindent\textit{Scoped} (T004)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+# Fix the percentile calculation
+
+Our reporting CLI computes summary percentiles and the numbers are wrong. The
+`percentile(values, p)` function in `repo/stats.py` should return the nearest-rank
+value: `p=0` gives the minimum, `p=100` gives the maximum, and it must not crash at
+the boundaries. Right now it returns a value one rank too high and errors at
+`p=100`. Please fix `percentile` so nearest-rank percentiles are correct.
+
+You can run the tests with: `python -m pytest tests/visible -q`
+\end{Verbatim}
+
+\noindent\textit{Loose} (T005)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+# Clean up the reporting stats module
+
+The reporting CLI's stats code is a bit of a mess and the percentile numbers look
+wrong. Take a look at `repo/stats.py` and the related helpers and get things into
+good shape. Make sure the percentiles come out right.
+
+You can run the tests with: `python -m pytest tests/visible -q`
+\end{Verbatim}
+
+\noindent\textit{Vague} (T006)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+The percentile numbers in our reports look wrong. Can you take a look and fix them?
+\end{Verbatim}
+
+\subsection*{Core: \emph{slug}}
+\noindent\textit{Scoped} (T016)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+# Fix the slug truncation
+
+Our report URLs use slugs truncated to a length limit, and the truncated slugs are
+wrong: they can end with a dangling hyphen, like "my-report-". The
+`truncate_slug(text, limit)` function in `repo/slug.py` should cut to at most `limit`
+characters and strip any trailing hyphen, so "my-report-title" at 10 gives
+"my-report". Please fix `truncate_slug`.
+
+You can run the tests with: `python -m pytest tests/visible -q`
+\end{Verbatim}
+
+\noindent\textit{Loose} (T017)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+The slug code is a bit of a mess and the truncated slugs look wrong. Take a look at
+repo/slug.py and the related helpers and get things into good shape.
+\end{Verbatim}
+
+\noindent\textit{Vague} (T018)
+\begin{Verbatim}[fontsize=\footnotesize,frame=leftline,xleftmargin=1em]
+The URL slugs in our reports look wrong, some end with a dash. Can you take a look and
+fix them?
+\end{Verbatim}
+

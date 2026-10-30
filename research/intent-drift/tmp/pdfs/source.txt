@@ -1,0 +1,51 @@
+                      Title of the Minor
+                            Project
+
+
+
+
+          VIVEKANANDA INSTITUTE OF PROFESSIONAL STUDIES - TECHNICAL CAMPUS
+                              Grade A++ Accredited Institution by NAAC
+              NBA Accredited for MCA Programme; Recognized under Section 2(f) by UGC;
+           Affiliated to GGSIP University, Delhi; Recognized by Bar Council of India and AICTE
+                                  An ISO 9001:2015 Certified Institution
+                             SCHOOL OF ENGINEERING & TECHNOLOGY
+
+
+
+
+                       Under the supervision of
+
+                            SUPERVISOR NAME
+
+                                                 by
+
+                <Student Name(s), Enroll. Nos.>
+
+
+
+
+             School of Engineering & Technology
+Vivekananda Institute of Professional Studies -Technical Campus
+                   Pitampura, Delhi - 110034
+Table of Contents ( with Page No. and Justification)
+
+1. Introduction ( + Literature Review, if research work)
+2. Problem Statement & Feasibility Study
+3. Hardware and Software Requirements
+
+4. References
+
+
+Note: A Synopsis report of 2-4 pages need to be submitted.
+
+
+
+Guidelines for Preparing Synopsis
+
+Normal Body Text: Font Size: 12, Times New Roman, 1.5 Line Spacing,
+Paragraph Heading: Font Size: 14, Times New Roman
+Chapter Heading: Font Size: 16, Times New Roman, Centre Aligned
+
+Reference: All the references should be arranged IEEE format
+

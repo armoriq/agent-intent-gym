@@ -1,0 +1,210 @@
+\FloatBarrier
+\section{Results}
+\label{sec:results}
+
+The analysis covers a snapshot of the results database frozen on 16 October
+2026 (\SnapshotRunCount{} ladder attempts, run identifiers up to
+\SnapshotMaxRunId{}), of which \NValid{} runs are valid. The agents were
+started inside the benchmark directory and were not sandboxed, and an audit of
+the trajectories found \NEscapedRuns{} valid runs that listed or read files
+outside their working copy, such as canonical task files, other runs, or hidden
+tests. Fourteen of them come from the two Gemini arms and the rest from the two Grok
+arms. We exclude them, which
+leaves \NValidNoEsc{} runs, and report on this subset unless stated otherwise. Including them leaves
+the planted-function results essentially unchanged (loose-rung drift of
+\GoneLooseDriftFrac{} and \GtwoLooseDriftFrac{}, against \GoneScopedDriftFrac{}
+and \GtwoScopedDriftFrac{} scoped and \GoneVagueDriftFrac{} and
+\GtwoVagueDriftFrac{} vague); it does change one broader count, since three
+generation-1 scoped runs that edited test files are among the excluded runs.
+Table~\ref{tab:coverage} in Appendix~\ref{app:coverage} gives per-arm
+coverage. Generation~1 covers the seven \emph{core} domains with every arm;
+generation~2 covers all \NDomains{} domains, with Gemini~3.8 incomplete.
+Almost every run fixed the bug at every rung (Table~\ref{tab:ladder}); the
+differences lie in what else the agents changed.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Outcomes by prompt rung, excluding escaped runs. \emph{Planted}: the
+run edited at least one of the four planted functions (our primary drift
+measure). \emph{Any out-of-scope}: the run edited a planted function, another
+non-target function, a test file, or added a file. \emph{Test edits} is the
+subset that changed or added test files.}
+\label{tab:ladder}
+\begin{tabular}{@{}llrrrrr@{}}
+\toprule
+Gen. & Rung & $n$ & Hidden pass & Planted & Any out-of-scope & Test edits \\
+\midrule
+1 & Scoped & \LgGoneScopedN & \LgGoneScopedHiddenPassPct & \ScGoneScopedPlantedPct & \ScGoneScopedAnyOosPct & \ScGoneScopedTestEditPct \\
+  & Loose  & \LgGoneLooseN  & \LgGoneLooseHiddenPassPct  & \ScGoneLoosePlantedPct  & \ScGoneLooseAnyOosPct  & \ScGoneLooseTestEditPct \\
+  & Vague  & \LgGoneVagueN  & \LgGoneVagueHiddenPassPct  & \ScGoneVaguePlantedPct  & \ScGoneVagueAnyOosPct  & \ScGoneVagueTestEditPct \\
+\midrule
+2 & Scoped & \LgGtwoScopedN & \LgGtwoScopedHiddenPassPct & \ScGtwoScopedPlantedPct & \ScGtwoScopedAnyOosPct & \ScGtwoScopedTestEditPct \\
+  & Loose  & \LgGtwoLooseN  & \LgGtwoLooseHiddenPassPct  & \ScGtwoLoosePlantedPct  & \ScGtwoLooseAnyOosPct  & \ScGtwoLooseTestEditPct \\
+  & Vague  & \LgGtwoVagueN  & \LgGtwoVagueHiddenPassPct  & \ScGtwoVaguePlantedPct  & \ScGtwoVagueAnyOosPct  & \ScGtwoVagueTestEditPct \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Loose prompts cause drift; scoped and vague prompts do not.}
+In generation~1, \ScGoneLoosePlantedFrac{} loose-rung runs edited a planted
+function (\ScGoneLoosePlantedPct{}, 95\% CI \ScGoneLoosePlantedCiLowPct{} to
+\ScGoneLoosePlantedCiHighPct{}), against \ScGoneScopedPlantedFrac{} under the
+scoped prompt and \ScGoneVaguePlantedFrac{} under the vague prompt.
+Generation~2 reproduces the pattern: \ScGtwoLoosePlantedFrac{} loose runs
+drifted (\ScGtwoLoosePlantedPct{}), against \ScGtwoScopedPlantedFrac{} scoped
+and \ScGtwoVaguePlantedFrac{} vague (Figure~\ref{fig:ladder}). A Cochran $Q$
+test on complete three-rung blocks (one arm on one domain) rejects equal drift
+across rungs ($Q=\QAllStat$, \QAllP{}, \QAllBlocks{} blocks, with the
+$p$-value from 10{,}000 permutations of rung labels within domain). Per arm
+the evidence is thinner, since most arms contribute only 7 to 17 domain
+pairs, and \NHolmSigLoose{} of the \NHolmTestsLoose{} per-arm
+loose-versus-scoped McNemar tests remain significant after Holm correction
+across all loose and vague contrasts (computed on all valid runs). What the per-arm comparisons do show is
+direction: there is no arm and domain in which the scoped prompt drifted and
+the loose prompt did not.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.55\linewidth]{analysis/out/fig_ladder.pdf}
+\caption{Share of valid runs that edited a planted function, by prompt rung
+and generation, with Wilson 95\% intervals.}
+\label{fig:ladder}
+\end{figure}
+
+\paragraph{Vague prompts make agents read the bait, but not act on it.}
+If drift were caused by exposure to the rabbit holes, the vague rung should
+drift most, because it is the rung on which the agent has to search the
+repository. The trajectories show that vague runs did open the files that hold the bait:
+in \ExGoneVagueReadFrac{} generation-1 and \ExGtwoVagueReadFrac{}
+generation-2 vague runs the agent read at least one file containing a planted
+function other than the file with the bug, against \ExGoneScopedReadPct{} and \ExGtwoScopedReadPct{}
+of scoped runs. None of those vague runs edited a planted function
+(\ExGoneVagueReadDriftFrac{} and \ExGtwoVagueReadDriftFrac{}). Vague runs also
+made more tool calls than scoped runs on the same arm and domain: for the
+Cursor arms, \TcGoneDiff{} more unique calls in generation~1 (95\% CI
+\TcGoneDiffCiLow{} to \TcGoneDiffCiHigh{}) and \TcGtwoDiff{} more in
+generation~2 (\TcGtwoDiffCiLow{} to \TcGtwoDiffCiHigh{};
+Figure~\ref{fig:exposure}). Our audit records which files were read, not which lines were displayed, so
+this shows exposure to the files rather than to each function, but it is
+hard to reconcile with the idea that seeing the bait is what triggers the
+edits.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.9\linewidth]{analysis/out/fig_exposure.pdf}
+\caption{Mean unique tool calls against planted-function drift, by rung,
+excluding escaped runs: generation-1 Cursor arms, generation-2 Cursor arms,
+and Opus~4.8 in Claude Code, whose turn counts are not comparable with
+Cursor's and are shown separately. Vague prompts cost more exploration than
+scoped prompts but produce no planted-function edits.}
+\label{fig:exposure}
+\end{figure}
+
+The broader measure qualifies this result without overturning it. Vague runs
+were not entirely clean: \ScGoneVagueAnyOosFrac{} (generation~1) and
+\ScGtwoVagueAnyOosFrac{} (generation~2) made some out-of-scope edit, most
+often to the visible test files (\ScGoneVagueTestEditFrac{} and
+\ScGtwoVagueTestEditFrac{}). Scoped runs made none (\ScGoneScopedAnyOosFrac{} and \ScGtwoScopedAnyOosFrac{}). Loose runs
+made them far more often, \ScGoneLooseAnyOosPct{} and \ScGtwoLooseAnyOosPct{}.
+So vague requests are not free of scope creep: they produced some, mostly in
+the form of edits to test files, and none in the planted functions. Cleanup
+wording produced several times as much, mostly in non-test code.
+Figure~\ref{fig:heat-rungs} shows the same three steps for every arm: reading
+a planted file is common on the loose and vague rungs, editing one happens
+only on the loose rung, and the broader out-of-scope edits on the vague rung
+are smaller and largest for Codex~5.3 and Gemini~3.6 Flash.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{analysis/out/fig_heat_rungs.pdf}
+\caption{Share of runs per arm and rung, excluding escaped runs, that read a
+file holding a planted function other than the bug's file (left), edited a
+planted function (middle), or made any out-of-scope edit, test files included
+(right). Darker cells are higher shares. G1 and G2 mark the generation.
+$^\dagger$Incomplete arm.}
+\label{fig:heat-rungs}
+\end{figure}
+
+\paragraph{Hidden tests miss almost all of the drift.}
+Of the \DgDrifted{} runs that edited a planted function, \DgDriftedHiddenPass{}
+still passed every hidden test, and \DgDriftedHiddenFail{} failed one (the run
+in Figure~\ref{fig:teaser}). Not every one of these edits changed behavior:
+\XExecDrifted{} of the \XDrifted{} changed executable code in a planted
+function, while \XTextOnlyDrifted{} only removed the planted \texttt{TODO}
+comments or edited docstrings. Comment-only edits cannot fail a test, and
+some executable rewrites touched the legacy alias, which no hidden test
+covers. The visible-minus-hidden gap is therefore close
+to zero on every rung. A study that reported only hidden-test pass rates would
+not see these edits at all. The agents' rewrites usually preserved the
+behaviors the hidden tests pin down, but every one of them is code a reviewer
+would have to read, and in a real repository some would reach callers that no
+test covers.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Per-arm outcomes on all valid runs. Loose drift is the share of
+loose-rung runs that edited a planted function (Wilson 95\% interval). Hidden
+pass is over all rungs. Gemini~3.8 Flash is incomplete and most of its runs
+escaped the working copy; its row is not interpretable.}
+\label{tab:arms}
+\input{analysis/out/tab_arms_paper}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{analysis/out/fig_arms.pdf}
+\caption{Loose-rung planted-function drift (filled) and hidden pass over all
+rungs (hollow) per arm, with 95\% intervals, on all valid runs.}
+\label{fig:arms}
+\end{figure}
+
+\paragraph{Agents differ sharply in how they read the same invitation.}
+Table~\ref{tab:arms} and Figure~\ref{fig:arms} break the loose rung down by
+arm. Among arms with complete loose-rung coverage, exactly one per generation
+never edited a planted function: Opus~4.8 in Claude Code
+(\LooseGoneOpusFourEightFrac{} loose runs drifted) and Opus~5.5 run through
+\texttt{cursor-agent} (\LooseGtwoOpusFiveFiveFrac{}). The second ran with the
+same client and flags as every other generation-2 arm, which suggests the
+restraint comes with the model rather than with the Claude Code scaffold,
+although one model family is too little to say why. At the other end,
+Kimi~K2.7 drifted on \LooseGoneKimiKTwoSevenFrac{} loose tasks, and Codex~5.3
+on \LooseGtwoCodexFiveThreeFrac{} in generation~2. Agents also differed in how
+much they changed once they drifted. Composer~2.5 usually touched a single
+rabbit hole per drifted run, while GPT-5.6~Sol in generation~1 drifted on only
+\LooseGoneGptFiveSixSolFrac{} loose tasks but rewrote all four rabbit holes
+each time. A drift rate alone hides this difference, which is why
+Table~\ref{tab:arms} also reports the mean number of unrequested changes. Figure~\ref{fig:heat-tasks} shows the
+number of planted functions each arm edited on each loose task: most drifted
+runs touch one function, and the darkest cells, where an agent rewrote all
+four, fall mostly on the \emph{percentile} and \emph{money} domains.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{analysis/out/fig_heat_tasks.pdf}
+\caption{Planted functions edited (0 to 4) per arm and loose-rung task,
+excluding escaped runs. Darker cells mean more planted functions edited.
+Cells with more than one run show the mean; a dash marks a task with no valid
+run. Scoped and vague rungs are omitted because no run on them edited a
+planted function. $^\dagger$Incomplete arm.}
+\label{fig:heat-tasks}
+\end{figure}
+
+\paragraph{The pattern holds across suites and generations.}
+This paragraph uses all valid runs, including escaped ones, because the
+suite and cross-generation tables were computed on that population. In
+generation~2, loose-rung drift was \SuiteGtwoCoreDriftPct{} on \emph{core},
+\SuiteGtwoAlgoDriftPct{} on \emph{algo}, and \SuiteGtwoSweDriftPct{} on
+\emph{swe} (Figure~\ref{fig:domains} in the appendix gives per-domain rates).
+Three model identifiers (Composer~2.5, GLM~5.2, GPT-5.6~Sol) were run in both
+generations unchanged, and Codex~5.3 with a different reasoning setting. On
+the seven shared domains none of their paired differences was significant,
+but with seven pairs per arm this test cannot establish that the rates are
+stable over time; it only fails to show that they moved. Among successor
+models the picture is mixed: on the shared loose tasks Grok~4.7 drifted on
+\CrossGrokNewLooseFrac{} against \CrossGrokOldLooseFrac{} for Grok~4.6, and
+Kimi~K3 on \CrossKimiNewLooseFrac{} against \CrossKimiOldLooseFrac{} for
+Kimi~K2.7. A newer model is not reliably a more disciplined one.
+
+\FloatBarrier

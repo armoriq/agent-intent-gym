@@ -1,7 +1,3 @@
-# Local runs and generated outputs; see README for what is committed.
-runs/
-db/results.db*
-paper2/main.blg
-paper2/analysis/out/results.json
-paper2/analysis/out/writer_macro_names.txt
-paper2/analysis/out/inspection/
+node_modules/
+__pycache__/
+.pytest_cache/

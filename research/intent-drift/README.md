@@ -56,12 +56,15 @@ tasks/            54 task directories: prompt.md, meta.yaml (scope contract), re
                   tests/visible, tests/hidden, _solution/ (reference fix)
 suites/           registry.yaml: suites, domains and rung membership
 harness/          run.py (runner and scorer), verify_task.py, suite and sweep scripts
-db/               schema.sql and queries.sql for the results store
+db/               schema.sql, queries.sql and results.db, the live results database
+runs/             one folder per agent run: trajectory.jsonl and the saved working copy
 armor-intent/     the task scope contracts as ArmorIQ policies, plus the eval spec
 docs/             research design, task authoring guide, related work notes
 paper2/           the paper: LaTeX source, main.pdf, analysis code, figures
   data/           results_snapshot.db, the frozen results database (655 runs)
   analysis/out/   per-run evidence and summary tables as CSV, all figures
+paper2_article_backup_2026-10-21/  the single-column version of the paper before the ACM switch
+paper/, deliverables/, output/, tmp/  earlier drafts, slides, reports and the minor-project synopsis
 ```
 
 ## Use it
@@ -84,7 +87,7 @@ Rebuild the paper PDF from the committed numbers and figures with [Tectonic](htt
 cd paper2 && tectonic main.tex
 ```
 
-`paper2/build.sh` regenerates every number, table and figure from `data/results_snapshot.db`. The escape and file-exposure audit also reads each run's raw agent transcript and saved working copy. Those transcripts total about 55 MB and are not in this repository, so the full rebuild only works where they are available. Every per-run result the audit produced is in [`paper2/analysis/out/run_evidence.csv`](paper2/analysis/out/run_evidence.csv).
+`paper2/build.sh` regenerates every number, table and figure from `data/results_snapshot.db`. The escape and file-exposure audit also reads each run's raw agent transcript and saved working copy. Those transcripts and working copies are in `runs/`. The results database stores them as absolute paths from the original machine, so the full rebuild elsewhere needs those paths remapped to `runs/`. Every per-run result the audit produced is in [`paper2/analysis/out/run_evidence.csv`](paper2/analysis/out/run_evidence.csv).
 
 ## Where the ideas come from
 

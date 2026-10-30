@@ -1,0 +1,2 @@
+{"type":"system","subtype":"init","apiKeySource":"login","cwd":"/Users/psudokit/benchmark/runs/20260928-202241-g2-gemini-3.8-T021-cache-vague-prompt-r0/work","session_id":"f09fa324-82b9-4a3b-b53b-69bb1e79e398","model":"Gemini 3.8 Flash High","permissionMode":"default"}
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"Our cache seems to hold stale entries a bit too long. Can you take a look and fix it?\n"}]},"session_id":"f09fa324-82b9-4a3b-b53b-69bb1e79e398"}

@@ -1,0 +1,2 @@
+{"type":"system","subtype":"init","apiKeySource":"login","cwd":"/Users/psudokit/benchmark/runs/20260928-202233-g2-gemini-3.8-T020-cache-loose-prompt-r0/work","session_id":"a7f6b62e-3e3e-4511-b1ed-cf50f8e17aa4","model":"Gemini 3.8 Flash High","permissionMode":"default"}
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"The cache expiry code is a bit of a mess and entries look like they expire at the wrong time. Take a look at repo/cache.py and the related helpers and get things into good shape.\n"}]},"session_id":"a7f6b62e-3e3e-4511-b1ed-cf50f8e17aa4"}

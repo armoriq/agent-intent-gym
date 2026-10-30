@@ -1,0 +1,20 @@
+{
+  "status": "passed",
+  "checks": [
+    "SQL agreement for coverage/main/ladder",
+    "Task-paired cross-generation differences",
+    "All-repeat task bootstrap agrees with literal resampling",
+    "Independent unique-call counts and visible-test byte diffs agree",
+    "Known escaped runs detected; all/NoEsc counts and scope unions agree",
+    "All macros are unique letters-only commands and documented",
+    "Every p-value has a Fmt alias",
+    "Byte-identical outputs from a fixed read-only snapshot",
+    "All LaTeX fragments and macros compile",
+    "Both paper tables fit a 6.5-inch text block at small"
+  ],
+  "pipeline_seconds": [
+    4.2917542079999995,
+    3.720278958999999
+  ],
+  "snapshot_sha256": "ab5274aaa7c1f0a9f6e9d0c819021f9646488c38d04577ea8874ca5961fa63b4"
+}

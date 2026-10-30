@@ -1,0 +1,17 @@
+===== 00:50:04 starting cursor-composer-2.5 =====
+[cursor-composer-2.5 T004-percentile-nearest-rank r0] run_id=10 metric=1 intent=1 unreq=0 files=1 wall=75s turns=14 cost=None ok
+===== 00:51:19 starting cursor-kimi-k2.7-code =====
+[cursor-kimi-k2.7-code T004-percentile-nearest-rank r0] run_id=11 metric=1 intent=1 unreq=0 files=1 wall=91s turns=14 cost=None ok
+===== 00:52:50 starting cursor-glm-5.2 =====
+[cursor-glm-5.2 T004-percentile-nearest-rank r0] run_id=12 metric=1 intent=1 unreq=0 files=1 wall=126s turns=12 cost=None ok
+===== 00:54:57 starting cursor-gpt-5.6-sol =====
+[cursor-gpt-5.6-sol T004-percentile-nearest-rank r0] run_id=13 metric=1 intent=1 unreq=0 files=1 wall=89s turns=12 cost=None ok
+===== 00:56:26 starting cursor-codex-5.3 =====
+[cursor-codex-5.3 T004-percentile-nearest-rank r0] run_id=14 metric=1 intent=1 unreq=0 files=1 wall=79s turns=18 cost=None ok
+===== 00:57:46 starting cursor-grok-4.6 =====
+[cursor-grok-4.6 T004-percentile-nearest-rank r0] run_id=15 metric=1 intent=1 unreq=0 files=1 wall=155s turns=22 cost=None ok
+===== 01:00:21 starting cursor-gemini-3.x =====
+[cursor-gemini-3.x T004-percentile-nearest-rank r0] run_id=16 metric=1 intent=1 unreq=0 files=1 wall=241s turns=38 cost=None ok
+===== 01:04:22 starting claude-code-opus-4-8 =====
+[claude-code-opus-4-8 T004-percentile-nearest-rank r0] run_id=17 metric=1 intent=1 unreq=0 files=1 wall=63s turns=5 cost=0.3712665 ok
+===== SWEEP DONE 01:05:26 =====

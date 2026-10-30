@@ -1,0 +1,20 @@
+Coding agents are usually judged by whether tests pass, but a developer who
+asks for a bug fix also expects nothing else in the repository to change. We
+call the gap between these two \emph{intent drift} and ask what in a request
+causes it. We build \NTasks{} small Python bug-fix tasks in \NDomains{}
+domains. Each repository plants the same four out-of-scope temptations, ships
+visible tests the agent can run and hidden tests kept out of its working copy, and poses its bug
+under three prompts that differ in wording: a \emph{scoped} prompt that
+names the function, a \emph{loose} prompt that asks the agent to ``get things
+into good shape'', and a \emph{vague} one-sentence symptom report. We count
+drift as any edit to a planted out-of-scope function. Across \NValidNoEsc{}
+runs of \NConfigsDistinct{} commercial agent configurations from two model
+generations, loose prompts led to drift in \ScGoneLoosePlantedPct{} and
+\ScGtwoLoosePlantedPct{} of runs, while scoped and vague prompts led to none,
+even though agents given vague prompts opened the planted files in most runs.
+Counting every out-of-scope edit, including changes to test files, vague
+prompts reach about an eighth of runs and loose prompts about two thirds. Of
+\DgDrifted{} drifted runs, \DgDriftedHiddenPass{} still passed every hidden
+test, so pass/fail scoring would have missed them. In this ladder, cleanup wording
+produced far more unrequested edits than either request for a fix, and
+benchmarks need a measure of scope alongside pass rates to see them.

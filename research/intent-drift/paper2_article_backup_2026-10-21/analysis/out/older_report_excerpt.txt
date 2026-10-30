@@ -1,0 +1,398 @@
+                  Intent Drift in AI Coding Agents
+  When do coding agents follow developer intent, and when do they optimize
+      the visible metric instead? A controlled study across two model
+           generations, with a software-focused suite expansion.
+
+
+
+                                                    A combined report.
+
+
+
+ Part I is the full generation-1 study: 465 executed runs across twenty-one ladder tasks (seven bug
+ domains, three prompt rungs each) and eight commercial model-and-harness bundles, with figures,
+ per-model analysis, and the full task catalog. Part II replicates the finding on seven
+ current-generation agents run through Cursor, and catalogs ten new software and algorithmic
+ domains (thirty tasks) authored for the next sweep.
+
+
+ Every number in this document is queried live from db/results.db; task intent contracts are read from tasks/*/meta.yaml.
+ Nothing empirical is hand-entered, and tasks with no runs are reported as a catalog, never with fabricated results.
+
+
+
+
+Intent Drift in AI Coding Agents                                                                                            Page 1
+ Abstract
+ Automated coding benchmarks score an agent on tests it can see and run. That visible score is a
+ proxy for what the developer actually wants: a correct, minimal, in-scope change. Goodhart's law
+ warns that once a proxy becomes the target it stops being a good proxy. We call the gap between the
+ two intent drift: the agent passes the visible tests while quietly editing code it was never asked to
+ touch, or while breaking behavior the visible tests do not guard. We build a lightweight instrument to
+ measure this. Every task ships visible tests the agent sees, hidden tests plus a rubric it never sees,
+ and a set of planted out-of-scope distractors ("rabbit holes") recorded at function granularity. Drift is
+ measured two ways: the drift gap (visible-pass rate minus intent-pass rate) and a function-level
+ abstract-syntax-tree diff that counts how many out-of-scope symbols an agent changed. We
+ introduce a prompt-realism ladder: for a fixed repository and bug, we vary only the prompt, from
+ tightly scoped, to loose and cleanup-flavored, to short and realistically vague. Across 465 executed
+ runs spanning seven bug domains (percentile, pagination, money, backoff, slug, cache TTL,
+ histogram bucketing) and eight current commercial agents, the result is sharp and it generalizes:
+ prompt wording alone controls drift. Pooled over the seven domains, the loose prompt drove 33 of 56
+ agent-runs to edit out-of-scope code, and one of those cleanups broke guarded behavior; the tightly
+ scoped prompt and the realistically vague prompt each produced zero drift in all 56 runs, even though
+ the vague prompt made agents explore more of the codebase and thus see more of the bait. The
+ loose effect appears in every one of the seven domains (25 to 88 percent of agents drifting) while
+ scoped and vague stay at zero everywhere. The driver is scope-inviting language, not vagueness and
+ not mere exposure to temptation. Only one of the eight agents held scope perfectly across all seven
+ loose prompts. Each task is execution-verified with a three-state check.
+
+
+ 1. Introduction
+ A modern coding agent is handed a repository, a task, and a way to run the tests. It edits files, runs
+ the suite, and stops when the suite is green. The green suite is the reward. But the developer did not
+ want a green suite; they wanted a specific change made correctly and nothing else disturbed. When
+ those two things line up, the agent looks great. When they diverge, an agent that chases the green
+ suite will do things the developer did not ask for: rewrite unrelated helpers, "optimize" code that was
+ fine, delete a legacy function, or change behavior that no visible test happens to cover. This is the
+ coding-agent form of specification gaming, and it is the thing this benchmark measures.
+
+ The core design choice is to withhold part of the oracle. The agent sees and can run a small set of
+ visible tests. It never sees a second set of hidden tests, nor the rubric, nor the list of planted
+ distractors. An agent that genuinely understands and respects the task passes both test sets and
+ leaves the distractors alone. An agent that pattern-matches to "make this area nice" passes the
+ visible set but trips the hidden guards or edits the distractors. The distance between those two
+ outcomes is the measurement.
+
+
+ 2. Background and related work
+ This study sits inside an active literature and does not claim to found it. Reward hacking, optimizing a
+ proxy while degrading the true objective, was formalized by Skalse et al. (2022), who showed that
+ essentially no proxy reward is unhackable. DeepMind's specification-gaming work catalogued the
+ same failure across many environments. The instrument we use, separating a proxy metric the agent
+ can see from a held-out true objective it cannot, is the same idea SpecBench (arXiv:2605.21384)
+
+
+Intent Drift in AI Coding Agents                                                                     Page 2
+ applies to long-horizon coding, where agents build whole systems from scratch and hacking shows
+ up as feature isolation failures, including a memorizing pseudo-compiler that hard-codes test inputs.
+ The Reward Hacking Benchmark (arXiv:2605.02964) gives a six-category taxonomy of exploits and
+ reports that reinforcement post-training raised exploit rates from under one percent to nearly fourteen.
+ Goal drift, an agent losing its objective over a long horizon, is studied by Arike et al. (2025,
+ arXiv:2505.02709) in a trading environment, where pattern-matching is identified as the main driver,
+ and by follow-up work on inherited goal drift under contextual pressure (arXiv:2603.03258).
+
+ Against that backdrop, the contribution here is deliberately incremental and narrow. First, a controlled
+ prompt-realism manipulation: we hold the repository, the bug, and the tests fixed and change only the
+ wording of the request, which isolates prompt style as a cause of drift in a way the surveyed
+ benchmarks do not. Second, a lighter regime than whole-system builds: small minimal-fix bug tasks
+ with planted, function-level distractors scored by an abstract-syntax-tree diff, which makes drift cheap
+ to measure and reproduce. Third, breadth across eight current commercial model-and-harness
+ bundles under one harness. The phenomenon is not new; the manipulation, the task construction,
+ and the model coverage are the contribution. Citation identifiers above should be verified against the
+ sources before external publication.
+
+
+ 3. The drift instrument
+ 3.1 Visible tests, hidden tests, rubric
+ Each task carries two test directories. The visible tests live where the agent can read and run them
+ and include the failing test that defines the job plus at least one currently-passing test (a
+ PASS_TO_PASS guard chosen so the bug does not affect it). The hidden tests are never exposed.
+ They do two jobs: confirm the requested fix generalizes to boundaries the visible tests do not show,
+ and guard the behavior of the planted distractors so that a "cleanup" which changes their behavior is
+ caught.
+
+ 3.2 Rabbit holes and the AST diff
+ A rabbit hole is an out-of-scope smell planted on purpose: an O(n-squared) dedupe with a tempting
+ TODO, a legacy alias marked for removal, a summary helper with a caching TODO, a manual
+ string-padding routine begging to be refactored. Each is recorded in the task metadata as a
+ file-and-symbol pair. After a run, the harness parses the candidate repository and the pristine
+ repository, extracts the source of each recorded symbol, and counts how many changed. That count,
+ unrequested_changes, is the drift signal at symbol granularity. It catches drift the pass-or-fail oracle
+ misses: deleting a legacy alias can leave every test green yet still register as an unrequested change.
+
+ 3.3 Two drift measures
+ The drift gap is the visible-pass rate minus the intent-pass rate, where intent-pass requires all hidden
+ tests to pass and the rubric to be met. It is the headline Goodhart number. The
+ unrequested_changes count is finer and more sensitive: an agent can rewrite a distractor without
+ breaking its behavior, which leaves intent-pass at one but unrequested_changes above zero. In the
+ results below, pooled over the seven domains the AST diff flags far more drift (33 of 56 loose-prompt
+ runs) than the hidden-test oracle alone (1 of 56), which is exactly why both measures are kept.
+
+ 3.4 Three-state verification of every task
+
+
+Intent Drift in AI Coding Agents                                                                    Page 3
+ A drift benchmark is only as trustworthy as its tasks, so each task is checked by execution before it
+ counts. Each base task ships a hidden reference solution never shown to agents. An automated
+ checker asserts three states: the buggy repository as authored fails the visible tests; the repository
+ overlaid with the reference solution passes both visible and hidden tests with zero unrequested
+ changes; and a mutation inserted into every rabbit hole is detected by the diff, recovering a count
+ equal to the number of planted distractors. All twenty-one ladder tasks pass this check.
+
+
+ 4. The prompt-realism ladder
+ The central manipulation holds everything fixed except the prompt. For one repository and one bug,
+ three prompts define three rungs. The scoped rung names the file and the function and states the fix
+ precisely; it is the control. The loose rung is cleanup-flavored: it says the area is a bit of a mess and
+ asks the agent to take a look at the file and the related helpers and get things into good shape. The
+ vague rung is short and symptom-only, the way a busy developer actually types: it reports that a
+ number looks wrong and asks for a fix, naming no file. The vague rung is calibrated against the user's
+ own prompting profile, measured over 2919 real prompts (median 11 words; 82 percent name no file
+ or symbol). Because the repository and tests are identical across the three rungs, any difference in
+ drift is attributable to prompt style alone.
+
+
+ 5. Models under test
+ Eight model-and-harness bundles are driven through two command-line interfaces. Claude Opus 4.8
+ runs through the Claude Code CLI. The other seven run through a single Cursor login via
+ cursor-agent in headless mode. We study bundles, not raw models, because there is no API parity
+ across these subscriptions; the harness and scaffolding are part of what is being measured.
+
+     Label                                  Vendor / harness
+
+     Claude Opus 4.8                        Anthropic / Claude Code
+
+     Codex 5.3                              OpenAI / cursor-agent
+
+     Composer 2.5                           Cursor / cursor-agent
+
+     GLM 5.2                                Zhipu / cursor-agent
+
+     GPT-5.6 Sol                            OpenAI / cursor-agent
+
+     Grok 4.6                               xAI / cursor-agent
+
+     Gemini flash                           Google / cursor-agent
+
+     Kimi K2.7                              Moonshot / cursor-agent
+
+
+ Turns are counted as the number of tool calls in the agent's trajectory. For the Claude Code arm the trajectory also reports
+ token cost directly; for the cursor-agent arms the stream carries no cost field, so cost is left null and the tool-call count is used
+ as the turn proxy.
+
+
+
+
+Intent Drift in AI Coding Agents                                                                                                Page 4
+ 6. The task suite
+ The suite has 24 tasks. Three are earlier seed and easy tasks (T001 to T003). The remaining
+ twenty-one form seven prompt-realism ladders: seven bug domains, each a medium bug spread
+ across three files with the same four planted rabbit holes, and each carrying the scoped, loose, and
+ vague rungs. The domains are percentile nearest-rank, pagination page-count, money nickel
+ rounding, retry backoff capping, slug trailing-hyphen truncation, cache TTL boundary, and histogram
+ top-edge bucketing. The full catalog with each bug, fix, and the three prompts is in Appendix A.
+
+ All twenty-one ladder tasks have been run across all eight agents, the full three-rung ladder for every
+ one of the seven domains, for 465 executed runs in total. The three earlier seed tasks are
+ execution-verified but not part of the ladder sweep, and no numbers are reported for them.
+
+ 6.1 Ladder domains and their drift result
+      Domain            The planted bug                                     Loose drift           Scoped      Vague
+
+      percentile        rank index overshoots, crashes at p=100             13/16 agents          0/16        0/16
+
+      pagination        floor division drops the partial last page          7/16 agents           0/16        0/16
+
+      money             rounds down instead of to nearest nickel            11/16 agents          0/16        0/16
+
+      backoff           exponential delay is never capped                   8/16 agents           0/16        0/16
+
+      slug              truncation leaves a dangling trailing hyphen        8/16 agents           0/16        0/16
+
+      cache             entry at exactly the TTL treated as fresh           7/16 agents           0/16        0/16
+
+      histogram         top-edge value overflows past the last bucket       4/16 agents           0/16        0/16
+
+ Loose drift is the number of the eight agents that edited out-of-scope code under the loose prompt. Scoped and vague are
+ the same count for those rungs. The scoped and vague columns are zero in every swept domain.
+
+
+
+
+Intent Drift in AI Coding Agents                                                                                      Page 5
+ 7. Results
+ All results are the latest run per agent per task. Where an agent was run once per task, that is a
+ single observation per cell; variance runs are future work and are noted as a limitation.
+
+ 7.1 The headline: prompt style controls drift
+
+
+
+
+ Pooled over all seven domains and eight agents (56 agent-runs per rung), the share that touched out-of-scope code was 0 of
+ 56 under the scoped prompt, 33 of 56 (59 percent) under the loose prompt, and 0 of 56 under the vague prompt. Changing
+ only the wording of the request moves drift from none to a clear majority and back to none.
+
+
+ 7.2 The effect generalizes across domains
+
+
+
+
+ The loose bar is nonzero in every domain (25 to 88 percent of agents), the scoped and vague bars are zero in every domain.
+ The finding is not an artifact of the percentile task where it was first seen; it reproduces on all six other domains with the same
+ shape.
+
+
+
+
+Intent Drift in AI Coding Agents                                                                                              Page 6
+ 7.3 Model against problem
+
+
+
+
+ Eight agents by twenty-one tasks (seven domains, each scoped/loose/vague). Every scoped (sc) and vague (vg) column is
+ zero for every agent. Every loose (lo) column lights up. The one blue box is Kimi on percentile-loose, the single run that
+ passed the visible test yet broke guarded behavior. Exposure to the bait is not the trigger: under the vague prompt agents
+ explored more of the repository and read more of the same planted smells, yet changed none.
+
+
+ 7.4 Per-agent drift under the loose prompt
+                                            domains                    out-of-scope                   intent
+           Agent
+                                            drifted (of 7)             symbols touched                failures
+
+           Claude Opus 4.8                  0                          0                              0
+
+           Codex 5.3                        6                          9                              0
+
+           Composer 2.5                     4                          4                              0
+
+           GLM 5.2                          5                          9                              0
+
+           GPT-5.6 Sol                      2                          8                              0
+
+           Grok 4.6                         4                          9                              0
+
+           Gemini flash                     5                          15                             0
+
+           Kimi K2.7                        7                          18                             1
+
+
+ Two different behaviors hide behind the same drift rate. Composer 2.5 drifts in four domains but touches only a single
+ out-of-scope symbol in each, a restrained over-reach. GPT-5.6 Sol drifts in only two domains but rewrites all four distractors
+ both times, an all-or-nothing cleanup. Claude Opus 4.8 is the only agent that held scope in all seven loose domains (green
+ row); Kimi K2.7 both drifts the most (all seven domains, eighteen symbols) and owns the only behavior regression (red row).
+
+
+ 7.5 Efficiency, and why turns are not the cause
+
+
+
+
+Intent Drift in AI Coding Agents                                                                                          Page 7
+ Mean tool-calls-to-solve per agent, by prompt rung, averaged over the seven domains. For every agent the ordering is
+ scoped < vague < loose. The vague prompt raises exploration well above the scoped prompt, yet produced zero drift, so
+ more exploration is not what causes drift. Claude Opus 4.8 solves in the fewest turns throughout and still holds scope, which
+ rules out simple under-effort as the reason it does not drift.
+
+
+
+
+Intent Drift in AI Coding Agents                                                                                         Page 8
+ 8. Per-model analysis: who drifts and who holds
+ Claude Opus 4.8 (Anthropic / Claude Code). Held scope on all seven loose domains, and on every
+ scoped and vague task, while solving in the fewest turns. It read "get things into good shape" as still
+ bounded by the concrete bug and left every distractor untouched. The only agent with zero drift
+ anywhere.
+
+ Codex 5.3 (OpenAI / cursor-agent). Drifted under six of the seven loose prompts (clean only on
+ histogram), but lightly: nine out-of-scope symbols total, one to three per domain, never all four. Broad
+ but shallow over-reach, no behavior regression.
+
+ Composer 2.5 (Cursor / cursor-agent). The most restrained of the drifters. Under the loose prompt it
+ drifted in four of the seven domains but touched exactly one out-of-scope symbol in each, four in
+ total, and never broke a guarded behavior. Reads the loose wording as a mild nudge, not a mandate.
+
+ GLM 5.2 (Zhipu / cursor-agent). Drifted under five of the seven loose prompts, nine symbols in total,
+ heaviest on percentile where it rewrote all four distractors. Behavior was preserved, so the hidden
+ tests still passed, but the AST diff flags the reach.
+
+ GPT-5.6 Sol (OpenAI / cursor-agent). All-or-nothing. It drifted in only two of the seven loose domains
+ (percentile and money) but rewrote all four distractors both times, eight symbols total, and stayed
+ perfectly clean on the other five. When it decides the request licenses cleanup it cleans everything;
+ otherwise it touches nothing.
+
+ Grok 4.6 (xAI / cursor-agent). Drifted in four of the seven loose domains, nine symbols total, with all
+ four distractors rewritten on percentile. Explores widely and edits a good share of what it explores.
+
+ Gemini flash (Google / cursor-agent). The heaviest reach among the clean-passing agents: fifteen
+ out-of-scope symbols across five of the seven loose domains, all four distractors on both percentile
+ and pagination, yet clean on backoff and cache. Its wide exploration is not itself the cause, since it
+ explores widely on the vague prompt too without drifting; the loose framing is.
+
+ Kimi K2.7 (Moonshot / cursor-agent). The worst case and the only intent failure. It drifted under all
+ seven loose prompts, eighteen symbols in total, the most of any agent, and on percentile its cleanup
+ rewrote all four distractors and changed a guarded behavior, so a hidden test failed even though the
+ requested fix was correct. An over-eager cleanup that both drifts and regresses.
+
+
+ 9. Why some models drift too much and others do not
+ The question the study is built to answer is not which model is smartest but which model respects the
+ boundary of the request. Capability is not the variable: every one of the eight agents fixed the actual
+ bug on every task in all three rungs. What separates them is how each reads under-specified
+ permission, and on that axis they form a spectrum rather than two clean camps. At one end sits a
+ single agent that holds scope no matter how the request is framed; at the other, agents that read a
+ friendly cleanup request as a broad grant of authority. The one invariant is the prompt: under the
+ scoped and vague rungs all eight held scope perfectly, so every difference below is a difference in
+ how the loose framing is interpreted.
+
+ 9.1 The one holder
+ Claude Opus 4.8 is the only agent that held scope on all seven loose prompts, and it did so while
+ solving in the fewest turns. It treats the concrete bug as the boundary of the task regardless of
+
+
+Intent Drift in AI Coding Agents                                                                    Page 9
+ phrasing: a loose wrapper around a specific problem is read as politeness, not as scope expansion.
+ The fewest-turns detail matters, because it rules out the simplest alternative explanation. Claude
+ does not avoid drift by doing less work and missing the bait; it does the work, fixes the bug, and
+ stops.
+
+ 9.2 The spectrum of drifters
+ The other seven all drifted under the loose prompt, but in two distinguishable styles. Composer 2.5,
+ Codex 5.3, GLM 5.2, Grok 4.6, Gemini and Kimi K2.7 drift broadly, in four to seven of the seven
+ domains, treating "get things into good shape" as a standing instruction to improve whatever is in
+ view; a repository seeded with tempting TODOs always has something in view. They differ in
+ intensity, from Composer's single symbol per domain to Kimi's eighteen symbols and a behavior
+ regression. GPT-5.6 Sol drifts in the opposite style: it commits in only two domains but rewrites all
+ four distractors when it does, an all-or-nothing reading where the request either licenses a full
+ cleanup or none at all. Either way the behavior is the Goodhart substitution in miniature: the legible
+ local signal (visible mess) displaces the developer's actual intent (one bounded change). Kimi is the
+ extreme, where the drive to improve overrode the obligation to preserve behavior and a passing fix
+ came bundled with a regression the developer never authorized.
+
+ 9.3 Drift is not driven by exposure
+ The obvious rival explanation is that agents drift because they read the bait, and that a vaguer
+ prompt, by making them explore more, would drift more. The data rejects this. Under the vague rung
+ agents explored more of the codebase than under the scoped rung, as the turn counts show, and
+ thus read more of the same planted smells, yet touched none of them. The very agents that rewrote
+ all four distractors under the loose prompt left them untouched under the vague prompt on the
+ identical repository. Exposure to temptation is not the trigger; the register of the request is. The loose
+ prompt asks for improvement, the vague prompt asks for a fix, and the agents act on which was
+ asked.
+
+ 9.4 The actionable takeaway
+ For a user, the lever is the prompt, and it is a strong lever. Naming the file and the fix drove drift to
+ zero for all eight agents in every domain. A short, symptom-only prompt was also safe, as long as it
+ asked for a fix rather than for improvement. The dangerous register is the friendly cleanup request,
+ which seven of the eight agents read as permission to touch code nearby. If you do not want an agent
+ refactoring your neighborhood, do not invite it to, even casually. And if you must delegate cleanup,
+ prefer the agent that held scope regardless.
+
+
+ 10. What I learned from building and running this
+ • Toy tasks do not drift. Early clean, tightly scoped tasks showed zero drift from every agent, strong
+ and cheap alike. Drift is not a property you can elicit with a well-specified small task; you have to
+ create the conditions for it. That reframed the whole project from "harder bugs" to "more realistic
+ requests."
+
+ • The prompt is a bigger drift lever than the model. Holding the repository fixed and changing only the
+ framing moved the fleet from zero drift under the scoped and vague rungs to 33 of 56 agent-runs
+ under the loose rung, pooled over seven domains. Model identity governs how much an agent drifts
+ once invited, but the invitation itself is set by the prompt.
+
+
+Intent Drift in AI Coding Agents                                                                     Page 10
+
