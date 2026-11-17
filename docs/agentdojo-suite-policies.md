@@ -2,7 +2,7 @@
 
 Round 1 runs ArmorIQ with one policy per AgentDojo suite: `agentdojo-workspace.yaml`, `agentdojo-banking.yaml`, `agentdojo-slack.yaml` and `agentdojo-travel.yaml` under `examples/armoriq-inside/policies/`.
 
-They were written once, before any run, by an author who was given only each suite's tool schemas and its starting data with every injection slot at AgentDojo's default text. The author saw no user task, no injection task and no result, and was told to write what a deployer would ship. The files are frozen: they are not edited after results exist, and a changed policy is a new deployment with a new name.
+They were written once, before any run, by an author who was given only each suite's tool schemas and its starting data with every injection slot at AgentDojo's default text. The author was given no user task, no injection task and no result, and was told to write what a deployer would ship. The inputs were restricted, not anonymous: the tool and data files are recognisably AgentDojo's, and the author was told not to look the benchmark up or rely on memory of it. The files are frozen: they are not edited after results exist, and a changed policy is a new deployment with a new name.
 
 The rest of this page is the author's own rationale, unedited apart from this introduction.
 

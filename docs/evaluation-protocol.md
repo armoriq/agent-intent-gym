@@ -1,6 +1,6 @@
 # Round 1 evaluation protocol
 
-Frozen on 2026-11-17, before any model run. A change to anything on this page starts a new protocol version, and results from different versions are never pooled.
+Frozen on 2026-11-17. About 60 smoke episodes ran before the freeze to check that every model route works, and the `code-fix` family changed because of them. Nothing from those episodes is reported. A change to anything on this page starts a new protocol version, and results from different versions are never pooled.
 
 ## Models
 
@@ -11,7 +11,7 @@ Frozen on 2026-11-17, before any model run. A change to anything on this page st
 
 - Reasoning effort is `medium` for every model.
 - Neither route accepts a temperature or a seed. Cases are repeated instead.
-- Every model is reached through `examples/benchmarks/model_gateway.py`, so the agent adapter, prompts and step limits are identical. The gateway checks that the reply came from the requested model.
+- Every model is reached through `examples/benchmarks/model_gateway.py`, so the agent adapter, prompts and step limits are identical. The gateway checks the reply's model on every OpenAI call and on every Claude plan call. It does not yet check a Claude tool session that ends through `finish`.
 
 ## Agent
 
@@ -59,7 +59,7 @@ Only the guard changes between conditions. After round 1 is published, the plan 
 
 ## Known limits
 
-- On the Claude route the tools reach the model through an MCP bridge, so tool names carry the prefix `mcp__gym__` and token counts are reported once per episode. On the OpenAI route reasoning items are not passed back between steps.
+- On the Claude route the tools reach the model through an MCP bridge, so tool names carry the prefix `mcp__gym__`. Token counts on that route cover the plan call only and are not reported. On the OpenAI route reasoning items are not passed back between steps.
 - A model's Claude Code system prompt is replaced with the adapter's, and its built-in tools are off, so this measures the model, not the Claude Code product.
 - The gym cases use one injection wording. A model that resists it may still follow a stronger one.
 - AgentDojo counts by break type assume the plan holds exactly the tools of AgentDojo's reference solution.
