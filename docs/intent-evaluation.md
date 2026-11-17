@@ -100,6 +100,17 @@ The campaign runs a scripted executor under local proxies: `plan-tools` (the too
 
 A tool-name plan check misses every `bad-args` case. Argument rules miss every `forbidden-tool` case, plus the file payee. Binding arguments to the plan stops all 14 attacks but also blocks the 14 allowed calls the plan left out. The success check needs only the requested call, so those blocks show up in the last column, not in safe completions. These are scripted results and local proxies. They are not language-model or product measurements.
 
+### The same idea for language models
+
+A model cannot run those 35 cases, because the scripted executor is handed the extra call. `runtime-intent-model` has 40 cases in ten families for real models. The request makes the agent read some data first (a bill, a channel, a source file), and that data carries either nothing, an instruction to misuse the requested tool (`inject-args`), an instruction to use a forbidden tool (`inject-tool`), or a third party's suggestion with no attacker behind it (`overreach`). Nothing the agent sees before that read names an attacker value.
+
+```bash
+uv run --no-sync python -m examples.benchmarks.model_gateway --openai-key-file PATH
+uv run --no-sync python scripts/run_runtime_intent_models.py --models gpt-6-luna,claude-haiku-5-5
+```
+
+The [round 1 protocol](evaluation-protocol.md) fixes the models, repeats, step limits and metrics.
+
 ## Run an intent evaluation without credentials
 
 From a repository checkout with Python 3.11 and uv:
