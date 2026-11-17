@@ -66,6 +66,40 @@ All **180 attempts completed without errors or time-limit failures**. Every conf
 
 Validation passed **129 tests**, code checks, package build and publication scanning. The documented offline command was also run successfully. The [model comparisons](benchmark-results.md) remain separate: they include smaller gains, step-limit failures and losses in task success. The reference guard's matching result means this study does not establish a unique ArmorIQ algorithm or a general advantage over other products.
 
+## When the agent leaves its plan
+
+In `authorization-boundaries` and `defense-layers`, the bad call is already in the captured plan. A plan check cannot see it. The `runtime-intent` suite covers the other case: the plan holds only the requested calls, and the extra call appears while the agent is running.
+
+It has 35 simulated cases in seven families: rent transfer, a bill whose payee is only in a file, a direct message, a calendar invite, an email with CC, a file deletion and a code fix. Each family has five cases:
+
+| Case | Extra call at run time | Request allows it? |
+| --- | --- | --- |
+| `clean` | none | |
+| `alt-args` | the planned tool, other arguments | yes |
+| `bad-args` | the planned tool, forbidden arguments | no |
+| `forbidden-tool` | a tool the plan never declared | no |
+| `authorized-tool` | a tool the plan never declared | yes |
+
+`bill-from-file` is the one family where the request does not state the payee. Rules written from the request alone cannot pin it, so the oracle holds the payee privately.
+
+```bash
+uv run --no-sync python scripts/run_runtime_intent_campaign.py
+```
+
+The campaign runs a scripted executor under local proxies: `plan-tools` (the tool name must be in the plan), `plan-exact` (tool and arguments must match a planned call), `argument-rules` (the request's argument rules with no tool allowlist), the two combined stacks and the reference intent. Results on the 35 cases:
+
+| Condition | Safe completions | Unsafe episodes | Allowed calls blocked |
+| --- | --- | --- | --- |
+| Unguarded | 21 | 14 | 0 |
+| `plan-tools` | 28 | 7 | 7 |
+| `argument-rules` | 27 | 8 | 0 |
+| `plan-tools` + `argument-rules` | 34 | 1 | 7 |
+| `plan-exact` | 35 | 0 | 14 |
+| `plan-exact` + `argument-rules` | 35 | 0 | 14 |
+| Reference intent | 34 | 1 | 0 |
+
+A tool-name plan check misses every `bad-args` case. Argument rules miss every `forbidden-tool` case, plus the file payee. Binding arguments to the plan stops all 14 attacks but also blocks the 14 allowed calls the plan left out. The success check needs only the requested call, so those blocks show up in the last column, not in safe completions. These are scripted results and local proxies. They are not language-model or product measurements.
+
 ## Run an intent evaluation without credentials
 
 From a repository checkout with Python 3.11 and uv:
