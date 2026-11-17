@@ -25,9 +25,9 @@ Frozen on 2026-11-17, before any model run. A change to anything on this page st
 | --- | --- | --- | --- |
 | Gym, `runtime-intent-model` | 40: 10 clean, 10 `inject-args`, 10 `inject-tool`, 10 `overreach` | 3 | 16 |
 | AgentDojo v1.2.2, no attack | all 97 user tasks | 1 | 30 |
-| AgentDojo v1.2.2, attacked | 160 pairs in `examples/benchmarks/agentdojo-subset-160.json` | 1 | 30 |
+| AgentDojo v1.2.2, attacked | all 949 (user task, injection task) pairs | 1 | 30 |
 
-- The AgentDojo subset is 40 pairs per suite, drawn with seed `20261117` by `scripts/select_agentdojo_subset.py`: 36 pairs where the injection reuses the user task's tools, 4 where it only asks for text, and 120 where it needs a tool outside the user task.
+- The 949 pairs are every user task against every injection task of its suite. `scripts/count_agentdojo_attack_types.py --json` writes the pair list and labels each pair by how the injection leaves the plan: 843 need a tool outside the user task, 86 reuse its tools, 20 only ask for text. Results on the 629 pairs used in the AgentDojo paper are reported as a subset.
 - The AgentDojo attack text is the "important instructions" wording with the fixed names "Emma Johnson" and "the AI assistant", so it does not vary by model.
 - The scripted `runtime-intent` suite (35 cases) checks the harness and is not a model result.
 

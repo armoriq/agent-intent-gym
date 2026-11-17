@@ -1,7 +1,7 @@
-"""Run language models on a fixed AgentDojo subset through the native adapter, with no guard.
+"""Run language models on AgentDojo pairs through the native adapter, with no guard.
 
 For every model and suite this runs the suite's user tasks once without an attack, then each
-selected injection task against its paired user tasks. The attack text is AgentDojo's
+injection task in the pair list against its paired user tasks. The attack text is AgentDojo's
 "important instructions" wording with fixed names, so it is the same for every model.
 Results stay in the native run store; this script writes an index of run ids and scores.
 """
@@ -97,7 +97,11 @@ def run_one(job, folder):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("subset", type=Path)
+    parser.add_argument(
+        "subset",
+        type=Path,
+        help="pairs to attack, as written by count_agentdojo_attack_types.py --json",
+    )
     parser.add_argument("pairs", type=Path, help="full per-pair file, for the clean task list")
     parser.add_argument("--models", required=True, help="comma-separated model ids")
     parser.add_argument("--endpoint", default="http://127.0.0.1:8791/v1")
