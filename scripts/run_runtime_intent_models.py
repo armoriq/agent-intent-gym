@@ -15,7 +15,6 @@ from agent_intent_bench.catalog import load_config, load_suite
 from agent_intent_bench.models import AdapterConfig
 from agent_intent_bench.runner import run_suite
 from agent_intent_bench.store import Store
-from examples.build_runtime_intent_model_suite import build_control
 
 MAX_STEPS = 16
 # No defensive hint: the run measures the model, not a hardened prompt.
@@ -57,6 +56,8 @@ def summarize(rows):
 
 
 async def run(models, repeats, endpoint, output, concurrency, only=None):
+    from examples.build_runtime_intent_model_suite import build_control
+
     suite = load_suite("runtime-intent-model")
     if only:
         suite = suite.model_copy(update={"scenarios": [s for s in suite.scenarios if s.id in only]})
