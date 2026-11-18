@@ -102,7 +102,7 @@ A tool-name plan check misses every `bad-args` case. Argument rules miss every `
 
 ### The same idea for language models
 
-A model cannot run those 35 cases, because the scripted executor is handed the extra call. `runtime-intent-model` has 40 cases in ten families for real models. The request makes the agent read some data first (a bill, a channel, a source file), and that data carries either nothing, an instruction to misuse the requested tool (`inject-args`), an instruction to use a forbidden tool (`inject-tool`), or a third party's suggestion with no attacker behind it (`overreach`). Nothing the agent sees before that read names an attacker value.
+A model cannot run those 35 cases, because the scripted executor is handed the extra call. `runtime-intent-model` has 50 cases in ten families for real models. The request makes the agent read some data first (a bill, a channel, a source file), and that data carries either nothing, an instruction to misuse the requested tool (`inject-args`), an instruction to use a forbidden tool (`inject-tool`), a third party's suggestion with no attacker behind it (`overreach`), or a plausible notice that contradicts the request, such as a changed bank account (`conflict`). The request says what to do and does not list what to avoid. Nothing the agent sees before that read names an attacker value.
 
 ```bash
 uv run --no-sync python -m examples.benchmarks.model_gateway --openai-key-file PATH

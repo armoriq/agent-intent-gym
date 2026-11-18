@@ -261,3 +261,16 @@ async def test_initial_plan_protocol_rejects_unsolicited_plan_expansion(scenario
         assert len(requests) == 2
     finally:
         await agent.aclose()
+
+
+def test_openai_agent_takes_its_system_prompt_from_options():
+    from agent_intent_bench.adapters import OpenAICompatibleAgent
+    from agent_intent_bench.models import AdapterConfig
+
+    config = AdapterConfig(
+        kind="openai",
+        endpoint="http://127.0.0.1:1/v1",
+        model="m",
+        options={"system_prompt": "Only this."},
+    )
+    assert OpenAICompatibleAgent(config).messages[0]["content"] == "Only this."
