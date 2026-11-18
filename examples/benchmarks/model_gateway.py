@@ -18,6 +18,7 @@ The OpenAI key is read from a file given on the command line and never logged.
 import argparse
 import asyncio
 import json
+import logging
 import sys
 import tempfile
 import time
@@ -30,6 +31,10 @@ from fastapi import FastAPI, HTTPException, Request
 
 EFFORT = "medium"
 IDLE_SECONDS = 180
+FINISH_SECONDS = 120
+OPENAI_ATTEMPTS = 4
+OPENAI_RETRYABLE = {429, 500, 502, 503, 504}
+log = logging.getLogger("model_gateway")
 BRIDGE = Path(__file__).with_name("mcp_tool_bridge.py")
 PREFIX = "mcp__gym__"
 
@@ -94,15 +99,27 @@ def completion(model, content, calls, usage=None):
     }
 
 
-async def openai_chat(client, key, body):
-    response = await client.post(
-        "https://api.openai.com/v1/responses",
-        json=responses_request(body),
-        headers={"Authorization": "Bearer " + key},
-    )
-    if response.status_code != 200:
-        error = response.json().get("error", {})
-        raise HTTPException(502, f"OpenAI {response.status_code}: {error.get('message', '')}")
+async def openai_chat(client, key, body, pause=2.0):
+    request = responses_request(body)
+    for attempt in range(1, OPENAI_ATTEMPTS + 1):
+        try:
+            response = await client.post(
+                "https://api.openai.com/v1/responses",
+                json=request,
+                headers={"Authorization": "Bearer " + key},
+            )
+        except httpx.TransportError as error:
+            status, detail = None, type(error).__name__
+        else:
+            if response.status_code == 200:
+                break
+            error = response.json().get("error", {})
+            status = response.status_code
+            detail = f"{error.get('code')}: {error.get('message', '')}"
+        log.warning("openai %s attempt %s: %s %s", body["model"], attempt, status, detail)
+        if attempt == OPENAI_ATTEMPTS or (status and status not in OPENAI_RETRYABLE):
+            raise HTTPException(502, f"OpenAI {status}: {detail}")
+        await asyncio.sleep(pause * 2 ** (attempt - 1))
     data = response.json()
     if not data["model"].startswith(body["model"]):
         raise HTTPException(502, f"OpenAI answered with {data['model']}")
@@ -151,13 +168,28 @@ def transcript(messages):
     return "\n\n".join(lines)
 
 
-def tokens(usage):
+def final_reply(model, stdout, returncode):
+    """The CLI's closing JSON, refused unless the requested model produced it."""
+    try:
+        data = json.loads(stdout)
+    except ValueError:
+        raise HTTPException(502, f"claude exited {returncode} without JSON") from None
+    if data.get("is_error") or not isinstance(data.get("result"), str):
+        raise HTTPException(502, f"claude returned no reply: {data.get('subtype')}")
+    if model not in data.get("modelUsage", {}):
+        raise HTTPException(502, f"claude answered with {sorted(data.get('modelUsage', {}))}")
+    return data
+
+
+def tokens(model, data):
+    """Whole-session token totals for the requested model."""
+    usage = data["modelUsage"][model]
     return {
         "prompt_tokens": sum(
             usage.get(k, 0)
-            for k in ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
+            for k in ("inputTokens", "cacheCreationInputTokens", "cacheReadInputTokens")
         ),
-        "completion_tokens": usage.get("output_tokens", 0),
+        "completion_tokens": usage.get("outputTokens", 0),
     }
 
 
@@ -238,15 +270,16 @@ class ClaudeSession:
             return "call", waiting.result()
         waiting.cancel()
         stdout, _ = self.finished.result()
+        return "reply", final_reply(self.model, stdout, self.process.returncode)
+
+    async def close(self):
+        """After the model's last tool call: let it exit, then check and count the session."""
         try:
-            data = json.loads(stdout)
-        except ValueError:
-            raise HTTPException(502, f"claude exited {self.process.returncode}") from None
-        if data.get("is_error") or not isinstance(data.get("result"), str):
-            raise HTTPException(502, f"claude returned no reply: {data.get('subtype')}")
-        if self.model not in data.get("modelUsage", {}):
-            raise HTTPException(502, f"claude answered with {sorted(data.get('modelUsage', {}))}")
-        return "reply", data
+            stdout, _ = await asyncio.wait_for(asyncio.shield(self.finished), FINISH_SECONDS)
+        except TimeoutError:
+            self.stop()
+            raise HTTPException(502, "claude did not exit after finish") from None
+        return final_reply(self.model, stdout, self.process.returncode)
 
     def stop(self):
         if self.process and self.process.returncode is None:
@@ -294,17 +327,19 @@ def create_app(openai_key=None, port=8791):
             text = event["result"].strip()
             if not body.get("tools"):
                 text = text.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-            return completion(body["model"], text, [], tokens(event.get("usage", {})))
+            return completion(body["model"], text, [], tokens(body["model"], event))
         name, arguments, future = event
         name = name.removeprefix(PREFIX)
         call_id = "call_" + uuid.uuid4().hex[:16]
+        usage = None
         if name == "finish":
             future.set_result("The task has ended.")
             sessions.pop(session.id, None)
+            usage = tokens(body["model"], await session.close())
             stats["claude_completed"] += 1
         else:
             pending[call_id] = (session, future)
-        return completion(body["model"], "", [(call_id, name, json.dumps(arguments))])
+        return completion(body["model"], "", [(call_id, name, json.dumps(arguments))], usage)
 
     @app.post("/bridge/{session_id}/call")
     async def bridge_call(session_id: str, request: Request):
@@ -337,5 +372,6 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=int, default=8791)
     parser.add_argument("--openai-key-file", type=Path)
     args = parser.parse_args()
+    logging.basicConfig(level=logging.WARNING, format="%(asctime)s %(name)s %(message)s")
     key = args.openai_key_file.read_text().strip() if args.openai_key_file else None
     uvicorn.run(create_app(key, args.port), host="127.0.0.1", port=args.port, log_level="warning")
