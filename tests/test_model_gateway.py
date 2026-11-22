@@ -1,5 +1,3 @@
-import json
-
 import httpx
 import pytest
 from fastapi import HTTPException
@@ -45,6 +43,14 @@ def test_chat_request_becomes_a_responses_request_with_paired_tool_calls():
     assert "temperature" not in request and "seed" not in request
 
 
+def test_reasoning_is_requested_only_from_models_that_accept_it():
+    def request(model):
+        return responses_request({"model": model, "messages": MESSAGES})
+
+    assert request("gpt-6-luna")["reasoning"] == {"effort": "medium"}
+    assert "reasoning" not in request("gpt-4o-mini")
+
+
 def test_cli_prompt_is_the_bare_request_when_nothing_else_was_said():
     assert transcript(MESSAGES[:2]) == "Send Bob a message."
     assert "[tool result call_1]" in transcript(MESSAGES)
@@ -83,14 +89,65 @@ async def test_openai_client_error_is_not_retried():
     assert len(calls) == 1
 
 
-def test_a_claude_session_answered_by_another_model_is_refused():
+def test_a_claude_turn_answered_by_another_model_is_refused():
     closing = {
         "result": "done",
         "modelUsage": {
             "claude-a": {"inputTokens": 5, "cacheReadInputTokens": 20, "outputTokens": 9}
         },
     }
-    data = final_reply("claude-a", json.dumps(closing), 0)
-    assert tokens("claude-a", data) == {"prompt_tokens": 25, "completion_tokens": 9}
+    assert tokens("claude-a", final_reply("claude-a", closing)) == {
+        "prompt_tokens": 25,
+        "completion_tokens": 9,
+    }
     with pytest.raises(HTTPException, match="answered with"):
-        final_reply("claude-b", json.dumps(closing), 0)
+        final_reply("claude-b", closing)
+    with pytest.raises(HTTPException, match="without a reply"):
+        final_reply("claude-a", None)
+
+
+FAKE_CLI = """#!{python}
+import json, sys
+turn = 0
+for line in sys.stdin:
+    turn += 1
+    text = json.loads(line)["message"]["content"][0]["text"]
+    usage = {{"claude-test": {{"inputTokens": 10 * turn, "outputTokens": turn}}}}
+    print(json.dumps({{"type": "result", "result": f"turn {{turn}}: {{text}}", "modelUsage": usage}}), flush=True)
+"""
+
+
+async def test_a_second_user_turn_goes_to_the_same_claude_process(tmp_path, monkeypatch):
+    import os
+    import sys
+
+    from examples.benchmarks.model_gateway import create_app
+
+    cli = tmp_path / "claude"
+    cli.write_text(FAKE_CLI.format(python=sys.executable))
+    cli.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{tmp_path}{os.pathsep}{os.environ['PATH']}")
+    app = create_app()
+    client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://gateway")
+    body = {
+        "model": "claude-test",
+        "messages": [{"role": "user", "content": "first"}],
+        "tools": TOOLS,
+    }
+    try:
+        first = (await client.post("/v1/chat/completions", json=body)).json()
+        message = first["choices"][0]["message"]
+        (ended,) = message["tool_calls"]
+        assert ended["function"]["name"] == "finish" and message["content"] == "turn 1: first"
+        body["messages"] += [
+            message,
+            {"role": "tool", "tool_call_id": ended["id"], "content": "{}"},
+            {"role": "user", "content": "second"},
+        ]
+        second = (await client.post("/v1/chat/completions", json=body)).json()
+        assert second["choices"][0]["message"]["content"] == "turn 2: second"
+        assert second["usage"] == {"prompt_tokens": 10, "completion_tokens": 1}
+    finally:
+        for session in app.state.sessions.values():
+            session.stop()
+        await client.aclose()

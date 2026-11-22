@@ -4,10 +4,12 @@
 chat-completions endpoint refuses function tools on reasoning models.
 
 `claude-*` models go to the `claude` CLI in print mode with its built-in tools, settings,
-other MCP servers and slash commands switched off. One CLI process serves one episode. The
-episode's tools reach the model as real tools through `mcp_tool_bridge.py`; each call is
-handed to the benchmark and its result is returned to the same process, so tool calls and
-history are native. Tool names carry the prefix `mcp__gym__` on that route.
+other MCP servers and slash commands switched off. One CLI process serves one episode,
+across every user turn. The episode's tools reach the model as real tools through
+`mcp_tool_bridge.py`; each call is handed to the benchmark and its result is returned to the
+same process, so tool calls and history are native. Tool names carry the prefix `mcp__gym__`
+on that route. A turn that ends with plain text reaches the adapter as a `finish` call, and
+the process then waits for the next user message until it has been idle for IDLE_SECONDS.
 
 Neither route accepts a temperature or a seed, so runs are repeated instead of seeded.
 The OpenAI key is read from a file given on the command line and never logged.
@@ -23,6 +25,7 @@ import sys
 import tempfile
 import time
 import uuid
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import httpx
@@ -30,6 +33,8 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 
 EFFORT = "medium"
+# These OpenAI families reject the reasoning option.
+NO_REASONING = ("gpt-4o", "gpt-4.1")
 IDLE_SECONDS = 180
 FINISH_SECONDS = 120
 OPENAI_ATTEMPTS = 4
@@ -69,9 +74,10 @@ def responses_request(body):
     request = {
         "model": body["model"],
         "input": items,
-        "reasoning": {"effort": EFFORT},
         "store": False,
     }
+    if not body["model"].startswith(NO_REASONING):
+        request["reasoning"] = {"effort": EFFORT}
     if body.get("tools"):
         request["tools"] = [{"type": "function", **tool["function"]} for tool in body["tools"]]
         request["parallel_tool_calls"] = False
@@ -168,22 +174,20 @@ def transcript(messages):
     return "\n\n".join(lines)
 
 
-def final_reply(model, stdout, returncode):
-    """The CLI's closing JSON, refused unless the requested model produced it."""
-    try:
-        data = json.loads(stdout)
-    except ValueError:
-        raise HTTPException(502, f"claude exited {returncode} without JSON") from None
-    if data.get("is_error") or not isinstance(data.get("result"), str):
-        raise HTTPException(502, f"claude returned no reply: {data.get('subtype')}")
-    if model not in data.get("modelUsage", {}):
-        raise HTTPException(502, f"claude answered with {sorted(data.get('modelUsage', {}))}")
-    return data
+def final_reply(model, event):
+    """The event that closes one CLI turn, refused unless the requested model produced it."""
+    if event is None:
+        raise HTTPException(502, "claude exited without a reply")
+    if event.get("is_error") or not isinstance(event.get("result"), str):
+        raise HTTPException(502, f"claude returned no reply: {event.get('subtype')}")
+    if model not in event.get("modelUsage", {}):
+        raise HTTPException(502, f"claude answered with {sorted(event.get('modelUsage', {}))}")
+    return event
 
 
-def tokens(model, data):
-    """Whole-session token totals for the requested model."""
-    usage = data["modelUsage"][model]
+def tokens(model, event):
+    """Token totals of the requested model for the whole CLI session so far."""
+    usage = event["modelUsage"][model]
     return {
         "prompt_tokens": sum(
             usage.get(k, 0)
@@ -193,15 +197,22 @@ def tokens(model, data):
     }
 
 
+def user_line(text):
+    message = {"role": "user", "content": [{"type": "text", "text": text}]}
+    return (json.dumps({"type": "user", "message": message}) + "\n").encode()
+
+
 class ClaudeSession:
-    """One `claude -p` process whose tool calls are answered by the benchmark."""
+    """One `claude -p` process for one episode: every user turn goes to the same process,
+    and its tool calls are answered by the benchmark."""
 
     def __init__(self, model):
         self.id = uuid.uuid4().hex[:12]
         self.model = model
-        self.calls = asyncio.Queue()
+        self.events = asyncio.Queue()
         self.process = None
-        self.finished = None
+        self.reader = None
+        self.counted = {"prompt_tokens": 0, "completion_tokens": 0}
         self.touched = time.monotonic()
 
     async def start(self, body, workdir, port):
@@ -224,8 +235,11 @@ class ClaudeSession:
             "",
             "--disable-slash-commands",
             "--no-session-persistence",
+            "--input-format",
+            "stream-json",
             "--output-format",
-            "json",
+            "stream-json",
+            "--verbose",
         ]
         if body.get("tools"):
             folder = Path(workdir)
@@ -256,53 +270,92 @@ class ClaudeSession:
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.DEVNULL,
+            limit=64 * 1024 * 1024,
         )
-        self.finished = asyncio.create_task(
-            self.process.communicate(transcript(body["messages"]).encode())
-        )
+        self.reader = asyncio.create_task(self.read())
+        await self.send(transcript(body["messages"]))
+
+    async def read(self):
+        """Queue the event that closes each turn; None when the process ends."""
+        while line := await self.process.stdout.readline():
+            try:
+                event = json.loads(line)
+            except ValueError:
+                continue
+            if event.get("type") == "result":
+                await self.events.put(("reply", event))
+        await self.events.put(("reply", None))
+
+    async def send(self, text):
+        self.process.stdin.write(user_line(text))
+        await self.process.stdin.drain()
 
     async def next_event(self):
-        """Wait for the model's next tool call, or for its final reply."""
-        waiting = asyncio.create_task(self.calls.get())
-        await asyncio.wait({waiting, self.finished}, return_when=asyncio.FIRST_COMPLETED)
+        """The model's next tool call, or the reply that ends its turn."""
+        kind, event = await self.events.get()
         self.touched = time.monotonic()
-        if waiting.done():
-            return "call", waiting.result()
-        waiting.cancel()
-        stdout, _ = self.finished.result()
-        return "reply", final_reply(self.model, stdout, self.process.returncode)
+        return (kind, final_reply(self.model, event)) if kind == "reply" else (kind, event)
 
-    async def close(self):
-        """After the model's last tool call: let it exit, then check and count the session."""
-        try:
-            stdout, _ = await asyncio.wait_for(asyncio.shield(self.finished), FINISH_SECONDS)
-        except TimeoutError:
-            self.stop()
-            raise HTTPException(502, "claude did not exit after finish") from None
-        return final_reply(self.model, stdout, self.process.returncode)
+    def spent(self, event):
+        """Tokens used since the last turn that was counted."""
+        total = tokens(self.model, event)
+        delta = {key: total[key] - self.counted[key] for key in total}
+        self.counted = total
+        return delta
 
     def stop(self):
         if self.process and self.process.returncode is None:
             self.process.kill()
+        if self.reader:
+            self.reader.cancel()
 
 
 def create_app(openai_key=None, port=8791):
-    app = FastAPI()
+    # pending: a tool call waiting for its result. parked: a finished turn waiting for the
+    # user's next message. Both are keyed by the call id handed to the agent adapter.
+    sessions, pending, parked = {}, {}, {}
+
+    async def sweep_idle():
+        while True:
+            await asyncio.sleep(30)
+            sweep()
+
+    @asynccontextmanager
+    async def lifespan(app):
+        sweeper = asyncio.create_task(sweep_idle())
+        yield
+        sweeper.cancel()
+        for session in sessions.values():
+            session.stop()
+
+    app = FastAPI(lifespan=lifespan)
+    app.state.sessions = sessions
     workdir = tempfile.mkdtemp(prefix="model-gateway-")
     client = httpx.AsyncClient(timeout=600)
-    sessions, pending = {}, {}
-    stats = {"claude_sessions": 0, "claude_completed": 0, "claude_stopped_idle": 0}
+    stats = {"claude_sessions": 0, "claude_turns": 0, "claude_stopped_mid_turn": 0}
 
     def sweep():
+        waiting = {id(s) for s in parked.values()}
         for session in list(sessions.values()):
-            if time.monotonic() - session.touched > IDLE_SECONDS:
-                session.stop()
-                sessions.pop(session.id, None)
-                stats["claude_stopped_idle"] += 1
-                for call_id, (owner, future) in list(pending.items()):
-                    if owner is session:
-                        pending.pop(call_id)
-                        future.cancel()
+            if time.monotonic() - session.touched <= IDLE_SECONDS:
+                continue
+            session.stop()
+            sessions.pop(session.id, None)
+            if id(session) not in waiting:
+                stats["claude_stopped_mid_turn"] += 1
+            for table in (pending, parked):
+                for call_id, entry in list(table.items()):
+                    if session in (entry if isinstance(entry, tuple) else (entry,)):
+                        table.pop(call_id)
+                        if isinstance(entry, tuple):
+                            entry[1].cancel()
+
+    async def end_of_turn(session, body, reply, call_id):
+        """Hand the adapter a `finish` call it can answer when the user speaks again."""
+        stats["claude_turns"] += 1
+        parked[call_id] = session
+        text = reply["result"].strip()
+        return completion(body["model"], text, [(call_id, "finish", "{}")], session.spent(reply))
 
     async def claude_chat(body):
         sweep()
@@ -311,35 +364,48 @@ def create_app(openai_key=None, port=8791):
             if message["role"] == "assistant":
                 break
             trailing.insert(0, message)
-        answered = [m for m in trailing if m["role"] == "tool" and m["tool_call_id"] in pending]
-        if answered:
-            session, future = pending.pop(answered[0]["tool_call_id"])
+        answered = [m["tool_call_id"] for m in trailing if m["role"] == "tool"]
+        if any(call_id in pending for call_id in answered):
+            session, future = pending.pop(next(c for c in answered if c in pending))
             future.set_result("\n\n".join(m.get("content") or "" for m in trailing))
+        elif any(call_id in parked for call_id in answered):
+            session = parked.pop(next(c for c in answered if c in parked))
+            said = [m.get("content") or "" for m in trailing if m["role"] == "user"]
+            if not said:
+                raise HTTPException(400, "A finished turn needs a new user message")
+            await session.send("\n\n".join(said))
         else:
             session = ClaudeSession(body["model"])
             sessions[session.id] = session
             stats["claude_sessions"] += 1
             await session.start(body, workdir, port)
+        call_id = "call_" + uuid.uuid4().hex[:16]
         kind, event = await session.next_event()
-        if kind == "reply":
+        if kind == "reply" and not body.get("tools"):
+            session.stop()
             sessions.pop(session.id, None)
-            stats["claude_completed"] += 1
+            stats["claude_turns"] += 1
             text = event["result"].strip()
-            if not body.get("tools"):
-                text = text.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-            return completion(body["model"], text, [], tokens(body["model"], event))
+            text = text.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+            return completion(body["model"], text, [], session.spent(event))
+        if kind == "reply":
+            return await end_of_turn(session, body, event, call_id)
         name, arguments, future = event
         name = name.removeprefix(PREFIX)
-        call_id = "call_" + uuid.uuid4().hex[:16]
-        usage = None
-        if name == "finish":
-            future.set_result("The task has ended.")
-            sessions.pop(session.id, None)
-            usage = tokens(body["model"], await session.close())
-            stats["claude_completed"] += 1
-        else:
-            pending[call_id] = (session, future)
-        return completion(body["model"], "", [(call_id, name, json.dumps(arguments))], usage)
+        while name == "finish":
+            future.set_result("The turn has ended.")
+            try:
+                kind, event = await asyncio.wait_for(session.next_event(), FINISH_SECONDS)
+            except TimeoutError:
+                session.stop()
+                sessions.pop(session.id, None)
+                raise HTTPException(502, "claude did not end its turn after finish") from None
+            if kind == "reply":
+                return await end_of_turn(session, body, event, call_id)
+            name, arguments, future = event
+            name = "finish"
+        pending[call_id] = (session, future)
+        return completion(body["model"], "", [(call_id, name, json.dumps(arguments))])
 
     @app.post("/bridge/{session_id}/call")
     async def bridge_call(session_id: str, request: Request):
@@ -348,7 +414,7 @@ def create_app(openai_key=None, port=8791):
             return {"content": "The task has ended."}
         body = await request.json()
         future = asyncio.get_running_loop().create_future()
-        await session.calls.put((body["name"], body["arguments"], future))
+        await session.events.put(("call", (body["name"], body["arguments"], future)))
         return {"content": await future}
 
     @app.post("/v1/chat/completions")
@@ -362,7 +428,7 @@ def create_app(openai_key=None, port=8791):
 
     @app.get("/stats")
     async def read_stats():
-        return {**stats, "claude_open": len(sessions)}
+        return {**stats, "claude_open": len(sessions), "claude_parked": len(parked)}
 
     return app
 
