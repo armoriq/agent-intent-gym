@@ -3,12 +3,16 @@ import json
 import pytest
 
 from agent_intent_bench.catalog import load_config, load_suite
-from agent_intent_bench.models import AdapterConfig
+from agent_intent_bench.models import AdapterConfig, ToolCall
 from agent_intent_bench.runner import run_suite
 from agent_intent_bench.store import Store
+from agent_intent_bench.world import DeclarativeWorld
 from examples.build_runtime_intent_model_suite import (
+    ERROR_KINDS,
+    ERRORS,
     FAMILIES,
     KINDS,
+    NOT_FOUND,
     build_control,
     build_suite,
     calls,
@@ -28,7 +32,9 @@ ATTACKER_VALUES = (
 def test_suite_is_frozen_and_hides_attacker_values_until_the_read():
     suite = load_suite("runtime-intent-model")
     assert suite.model_dump() == build_suite().model_dump()
-    assert len(suite.scenarios) == len(FAMILIES) * len(KINDS)
+    assert len(suite.scenarios) == len(FAMILIES) * (len(KINDS) - len(ERROR_KINDS)) + len(
+        ERRORS
+    ) * len(ERROR_KINDS)
     for scenario in suite.scenarios:
         visible = json.dumps(
             {
@@ -43,8 +49,41 @@ def test_suite_is_frozen_and_hides_attacker_values_until_the_read():
         assert not [v for v in ATTACKER_VALUES if v in visible], scenario.id
         kind = scenario.id.rsplit(".", 1)[1]
         carrier = scenario.tools[0].response["content"]
+        if isinstance(carrier, dict):
+            (carrier,) = scenario.initial_state["sources"].values()
         assert ("<INFORMATION>" in carrier) == kind.startswith("inject-"), scenario.id
         assert not [s for s in scenario.request.split(". ") if s.startswith("Do not")]
+
+
+def test_a_keyed_read_returns_the_data_only_for_the_path_the_request_names():
+    scenario = next(s for s in build_suite().scenarios if s.id == "runtime-model.code-fix.conflict")
+    world = DeclarativeWorld(scenario)
+
+    def read(path):
+        call = ToolCall(tool="repo__read_file", args={"path": path})
+        return world.execute(call, scenario.intent)[0]["data"]["content"]
+
+    assert "page_count" in read("src/pager.py")
+    assert read("src/paging/core.py") == NOT_FOUND
+
+
+async def test_error_kinds_fail_the_first_requested_call_with_the_error_text(tmp_path):
+    base = load_config("examples/intent-evaluation.yaml")
+    base.mode = "unguarded"
+    for scenario in build_suite().scenarios:
+        family, kind = scenario.id.split(".")[1:]
+        if kind not in ERROR_KINDS:
+            continue
+        config = base.model_copy(deep=True)
+        config.agent = AdapterConfig(
+            kind="script", options={"actions": calls(family, kind)["ignore"][:2]}
+        )
+        suite = build_suite().model_copy(update={"scenarios": [scenario]})
+        episode = (await run_suite(suite, config, Store(tmp_path / "store"))).episodes[0]
+        failed = [e for e in episode.events if e.kind == "action"][1]
+        text = ERRORS[family]["args"][1] if kind == "error-args" else ERRORS[family]["tool"]
+        assert failed.result == {"status": "error", "error": text}, scenario.id
+        assert not failed.committed and not episode.success, scenario.id
 
 
 @pytest.mark.parametrize("trace", ["ignore", "follow"])

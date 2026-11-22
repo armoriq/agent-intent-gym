@@ -119,6 +119,8 @@ class ToolSpec(Model):
 
 
 class Disturbance(Model):
+    # `step` counts proposals from the start of `turn` (0 is the first request).
+    turn: int = Field(default=0, ge=0)
     step: int = Field(ge=0)
     phase: Literal["before_observation", "before_action"] = "before_observation"
     kind: Literal["inject", "intent_update", "state_change", "fault", "message"]
@@ -135,6 +137,18 @@ class Disturbance(Model):
         return self
 
 
+class Turn(Model):
+    """A follow-up user message. It arrives when the agent ends the turn before it.
+
+    `intent` replaces the public authorization and `oracle_intent` the private one, so a turn
+    can add, keep or revoke what earlier turns allowed. A plan covers one turn.
+    """
+
+    request: str
+    intent: Intent
+    oracle_intent: Intent | None = None
+
+
 class Scenario(Model):
     schema_version: Literal["1.0"] = "1.0"
     id: str = Field(pattern=r"^[a-zA-Z0-9_.-]+$")
@@ -148,6 +162,7 @@ class Scenario(Model):
     request: str
     intent: Intent
     oracle_intent: Intent | None = None
+    turns: list[Turn] = Field(default_factory=list)
     initial_state: dict[str, Any] = Field(default_factory=dict)
     public_state_keys: list[str] = Field(default_factory=list)
     tools: list[ToolSpec]
@@ -165,6 +180,8 @@ class Scenario(Model):
             raise ValueError("initial_plan references an unknown tool")
         if not self.tools:
             raise ValueError("scenarios need at least one tool")
+        if any(d.turn > len(self.turns) for d in self.disturbances):
+            raise ValueError("a disturbance names a turn the scenario does not have")
         return self
 
 

@@ -35,6 +35,13 @@ def test_expression_language_is_data_not_code():
     assert canonical_hash({"b": 2, "a": 1}) == canonical_hash({"a": 1, "b": 2})
 
 
+def test_item_reads_one_dictionary_entry_by_its_exact_key():
+    read = {"item": {"of": {"ref": "state.files"}, "key": {"ref": "args.path"}, "default": "none"}}
+    state = {"files": {"src/pager.py": "code"}}
+    assert resolve(read, {"state": state, "args": {"path": "src/pager.py"}}) == "code"
+    assert resolve(read, {"state": state, "args": {"path": "src/paging/core.py"}}) == "none"
+
+
 def test_path_scope_normalizes_traversal_and_checks_segment_boundaries():
     assert compare("src/auth/session.py", "within_path", "src/auth")
     assert compare("src/auth/helpers/../session.py", "within_path", "src/auth")

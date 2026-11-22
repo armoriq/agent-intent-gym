@@ -65,7 +65,16 @@ class DeclarativeWorld:
                         "error": "The same idempotency key was reused with different arguments",
                     }, False
                 return {**copy.deepcopy(entry["result"]), "deduplicated": True}, False
-        fault = next((f for f in self.faults if f.get("tool") == call.tool), None)
+        # A fault with `args` waits for a call that carries exactly those argument values.
+        fault = next(
+            (
+                f
+                for f in self.faults
+                if f.get("tool") == call.tool
+                and all(call.args.get(k) == v for k, v in f.get("args", {}).items())
+            ),
+            None,
+        )
         if fault and not fault.get("after_commit", False):
             self.faults.remove(fault)
             return {

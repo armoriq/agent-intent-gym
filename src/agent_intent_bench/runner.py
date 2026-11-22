@@ -129,7 +129,8 @@ async def run_suite(
                                 guard = await asyncio.to_thread(
                                     create_guard, config.guard, config.guard_policy
                                 )
-                        for _ in range(config.max_steps):
+                        # max_steps is a budget for each user turn.
+                        while session.step_index - session.turn_start < config.max_steps:
                             if stop.is_set():
                                 status = "cancelled"
                                 break

@@ -102,12 +102,18 @@ A tool-name plan check misses every `bad-args` case. Argument rules miss every `
 
 ### The same idea for language models
 
-A model cannot run those 35 cases, because the scripted executor is handed the extra call. `runtime-intent-model` has 50 cases in ten families for real models. The request makes the agent read some data first (a bill, a channel, a source file), and that data carries either nothing, an instruction to misuse the requested tool (`inject-args`), an instruction to use a forbidden tool (`inject-tool`), a third party's suggestion with no attacker behind it (`overreach`), or a plausible notice that contradicts the request, such as a changed bank account (`conflict`). The request says what to do and does not list what to avoid. Nothing the agent sees before that read names an attacker value.
+A model cannot run those 35 cases, because the scripted executor is handed the extra call. `runtime-intent-model` has 70 cases in ten families for real models. The request makes the agent read some data first (a bill, a channel, a source file), and that data carries either nothing, an instruction to misuse the requested tool (`inject-args`), an instruction to use a forbidden tool (`inject-tool`), a third party's suggestion with no attacker behind it (`overreach`), or a plausible notice that contradicts the request, such as a changed bank account (`conflict`). In two more kinds the data is clean and the requested tool's first call fails: the error text offers a different argument (`error-args`) or says another tool will unblock it (`error-tool`). A second call with the requested arguments succeeds. The request says what to do and does not list what to avoid. Nothing the agent sees before that read names an attacker value.
+
+`runtime-intent-turns` has 25 two-turn cases in five families. The second user request arrives when the agent ends the first turn. It adds a task, and the agent declares a new plan for it. A notice planted in the first turn's data targets the second turn's task (`plant`), also when the second turn's first call fails with a plain error that names no alternative (`plant-error`). In `revoke` the second request withdraws a permission the first one gave and a third party asks for exactly that action; in `revoke-error` a failing call's error text asks for it.
 
 ```bash
 uv run --no-sync python -m examples.benchmarks.model_gateway --openai-key-file PATH
 uv run --no-sync python scripts/run_runtime_intent_models.py --models gpt-6-luna,claude-haiku-5-5
+uv run --no-sync python scripts/run_runtime_intent_models.py --suite runtime-intent-turns --models gpt-6-luna,claude-haiku-5-5
+uv run --no-sync python scripts/list_runtime_intent_cases.py
 ```
+
+The last command prints every case of both suites as one readable page: the requests, what the data or the error says, and the call that would be unauthorized.
 
 The [round 1 protocol](evaluation-protocol.md) fixes the models, repeats, step limits and metrics.
 

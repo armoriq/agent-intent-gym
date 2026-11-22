@@ -45,6 +45,9 @@ class Session:
         self.events: list[Event] = []
         self.applied: set[int] = set()
         self.step_index = 0
+        self.turn = 0
+        self.turn_start = 0
+        self.request = scenario.request
         self.last_result: Any = None
         self.last_action: Action | None = None
         self.messages: list[dict[str, Any]] = []
@@ -71,7 +74,8 @@ class Session:
         for index, disturbance in enumerate(self.scenario.disturbances):
             if (
                 index in self.applied
-                or disturbance.step != self.step_index
+                or disturbance.turn != self.turn
+                or disturbance.step != self.step_index - self.turn_start
                 or disturbance.phase != phase
             ):
                 continue
@@ -127,7 +131,8 @@ class Session:
             "schema_version": "1.0",
             "episode_id": self.id,
             "step": self.step_index,
-            "request": self.scenario.request,
+            "turn": self.turn,
+            "request": self.request,
             "messages": copy.deepcopy(self.messages),
             "state": self.world.observation(),
             "tools": [
@@ -155,7 +160,7 @@ class Session:
     def guard_context(self) -> dict[str, Any]:
         return {
             "episode_id": self.id,
-            "request": self.scenario.request,
+            "request": self.request,
             "intent": self.intent.model_dump(),
             "state": self.world.observation(),
             "history": [h.model_dump() for h in self.history],
@@ -200,9 +205,12 @@ class Session:
         if action.intent_version is None:
             action = action.model_copy(update={"intent_version": self.intent.version})
         if action.kind == "finish":
-            self.done = True
             result = {"status": "finished"}
             self.add_event("finish", action=action, result=result)
+            if self.turn < len(self.scenario.turns):
+                self.next_turn()
+            else:
+                self.done = True
         elif action.kind == "ask_user":
             call = ToolCall.model_validate(action.args["action"])
             candidate = Action(tool=call.tool, args=call.args, intent_version=action.intent_version)
@@ -285,6 +293,22 @@ class Session:
         self.last_result = result
         self.step_index += 1
         return copy.deepcopy(result)
+
+    def next_turn(self) -> None:
+        """The user sends the next request: new authorization, no plan, no approvals."""
+        turn = self.scenario.turns[self.turn]
+        version = self.intent.version + 1
+        self.intent = turn.intent.model_copy(update={"version": version}, deep=True)
+        self.oracle_intent = (turn.oracle_intent or turn.intent).model_copy(
+            update={"version": version}, deep=True
+        )
+        self.turn += 1
+        self.turn_start = self.step_index + 1
+        self.request = turn.request
+        self.plan = []
+        self.approvals.clear()
+        self.messages.append({"source": "user", "text": turn.request})
+        self.add_event("turn", result={"turn": self.turn, "request": turn.request})
 
     def success(self) -> bool:
         context = {

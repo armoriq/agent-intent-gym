@@ -24,6 +24,7 @@ YAML uses `safe_load`; expressions do not execute Python or shell code. Generate
 | `initial_state` | Private starting state |
 | `public_state_keys` | Top-level state fields deliberately visible to agents/guards |
 | `success` | Nonempty list of independent outcome predicates |
+| `turns` | Optional follow-up user messages. Each has a `request`, the `intent` in force from then on and an optional private `oracle_intent`. A turn starts when the agent ends the one before it; a plan covers one turn, and `max_steps` is a budget per turn |
 | `disturbances` | Optional scheduled injections, updates, faults, or messages |
 
 Required fields are `id`, `name`, `domain`, `description`, `request`, `intent`, `tools`, and `success`. Schema version is `1.0`; scenario version defaults to `1.0.0`. Rule/tool IDs must be unique. Change versions when meaning changes.
@@ -54,7 +55,7 @@ Rules are conjunctive; each has an ID, description, optional applicable `tools` 
     right: {ref: intent.facts.target}
 ```
 
-References use `args.*`, `state.*`, `intent.facts.*`, and `history.*` where available. `{"len": {"ref": "state.outputs"}}` computes length; dictionaries/lists resolve recursively. Operators: `eq`, `ne`, `lt`, `lte`, `gt`, `gte`, `in`, `not_in`, `contains`, `not_contains`, `starts_with`, `within_path`, `matches`, `subset`, `exists`, `truthy`.
+References use `args.*`, `state.*`, `intent.facts.*`, and `history.*` where available. `{"len": {"ref": "state.outputs"}}` computes length; `{"item": {"of": {"ref": "state.files"}, "key": {"ref": "args.path"}, "default": "Not found."}}` reads one entry of a dictionary by an exact key, which may contain dots or slashes; dictionaries/lists resolve recursively. Operators: `eq`, `ne`, `lt`, `lte`, `gt`, `gte`, `in`, `not_in`, `contains`, `not_contains`, `starts_with`, `within_path`, `matches`, `subset`, `exists`, `truthy`.
 
 Missing fields resolve to null, so require important arguments in tool schemas. Equality distinguishes booleans from numbers; numeric ranges reject booleans/non-finite values. Use `within_path` for normalized POSIX path segments, not raw string prefixes; it does not resolve real symlinks. Use integer minor units for budget amounts. The world is a generic JSON simulator, not an accounting engine or policy-document precedence resolver.
 
@@ -75,14 +76,14 @@ Set `idempotency_field` to a required string argument for retry-safe tools. Exac
 
 ## Schedule challenges and controls
 
-Each disturbance specifies zero-based proposal `step`, `phase`, `kind`, `source`, and `payload`.
+Each disturbance specifies zero-based proposal `step`, `phase`, `kind`, `source`, and `payload`. An optional `turn` (default 0) counts `step` from the start of that user turn.
 
 | Kind | Payload / behavior |
 | --- | --- |
 | `inject` | `tool` and untrusted content returned by it |
 | `intent_update` | New facts/objective/rules/revocation; source must be `user` or `organization` |
 | `state_change` | Environment effects |
-| `fault` | Tool, optional `after_commit`, message; one-shot failure |
+| `fault` | Tool, optional `args` (the failure waits for a call with exactly these argument values), optional `after_commit`, message; one-shot failure |
 | `message` | Public text with explicit provenance |
 
 `before_observation` affects what the agent sees. `before_action` occurs after selection and before checks, supporting stale-selection/revocation tests. Authorized updates increment public/oracle versions and invalidate approvals; injected text cannot revise the contract. Within-episode message poisoning is not persistent cross-session memory.

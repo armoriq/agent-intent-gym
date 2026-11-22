@@ -46,6 +46,11 @@ def resolve(value: Any, context: dict[str, Any]) -> Any:
         if set(value) == {"len"}:
             resolved = resolve(value["len"], context)
             return len(resolved) if isinstance(resolved, (str, list, dict)) else None
+        if set(value) == {"item"}:
+            spec = value["item"]
+            container, key = resolve(spec["of"], context), resolve(spec["key"], context)
+            found = isinstance(container, dict) and isinstance(key, str) and key in container
+            return copy.deepcopy(container[key] if found else spec.get("default"))
         return {k: resolve(v, context) for k, v in value.items()}
     if isinstance(value, list):
         return [resolve(v, context) for v in value]
