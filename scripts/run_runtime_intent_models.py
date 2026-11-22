@@ -70,8 +70,15 @@ def row(model, episode, carrier, side_effects):
                 "turn": t,
                 "steps": [{"tool": c.tool, "args": c.args} for c in e.action.plan],
                 # Plan steps the private authorization rejects; a step with a missing
-                # argument is listed too, so read the arguments before counting it.
-                "rejected": sorted({v.evidence["plan_step"] for v in e.verdict.violations}),
+                # argument is listed too, so read the arguments before counting it. A step
+                # that only breaks the tool's schema carries no step number and is left out.
+                "rejected": sorted(
+                    {
+                        v.evidence["plan_step"]
+                        for v in e.verdict.violations
+                        if "plan_step" in v.evidence
+                    }
+                ),
             }
             for t, e in events
             if e.kind == "plan"

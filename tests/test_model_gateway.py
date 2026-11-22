@@ -147,6 +147,10 @@ async def test_a_second_user_turn_goes_to_the_same_claude_process(tmp_path, monk
         second = (await client.post("/v1/chat/completions", json=body)).json()
         assert second["choices"][0]["message"]["content"] == "turn 2: second"
         assert second["usage"] == {"prompt_tokens": 10, "completion_tokens": 1}
+        # The process behind an unknown call id is gone: refuse, do not replay the history.
+        body["messages"][-2]["tool_call_id"] = "call_unknown"
+        lost = await client.post("/v1/chat/completions", json=body)
+        assert lost.status_code == 409
     finally:
         for session in app.state.sessions.values():
             session.stop()

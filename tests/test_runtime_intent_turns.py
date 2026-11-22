@@ -103,6 +103,17 @@ async def test_a_failure_waits_for_the_requested_call_and_does_not_hide_an_unaut
     assert episode.effect_violations == 1 and episode.success
 
 
+async def test_the_model_runner_reports_an_episode_whose_plan_breaks_a_tool_schema(tmp_path):
+    from scripts.run_runtime_intent_models import row
+
+    scenario = build_suite().scenarios[0]
+    plan = {"kind": "plan", "plan": [{"tool": "slack__send_direct_message", "args": {}}]}
+    episode = await run_script(scenario, [plan, {"kind": "finish"}, {"kind": "finish"}], tmp_path)
+    assert episode.plan_violations == 1
+    # The step is rejected for its missing recipient; its schema violation has no step number.
+    assert row("model", episode, "slack__read_channel", set())["plans"][0]["rejected"] == [0]
+
+
 async def test_a_new_turn_starts_with_the_new_request_and_no_plan():
     scenario = build_suite().scenarios[0]
     session = Session(scenario, RunConfig(mode="unguarded"), "turns", 0)

@@ -332,7 +332,12 @@ def create_app(openai_key=None, port=8791):
     app.state.sessions = sessions
     workdir = tempfile.mkdtemp(prefix="model-gateway-")
     client = httpx.AsyncClient(timeout=600)
-    stats = {"claude_sessions": 0, "claude_turns": 0, "claude_stopped_mid_turn": 0}
+    stats = {
+        "claude_sessions": 0,
+        "claude_turns": 0,
+        "claude_stopped_mid_turn": 0,
+        "claude_lost_sessions": 0,
+    }
 
     def sweep():
         waiting = {id(s) for s in parked.values()}
@@ -374,6 +379,12 @@ def create_app(openai_key=None, port=8791):
             if not said:
                 raise HTTPException(400, "A finished turn needs a new user message")
             await session.send("\n\n".join(said))
+        elif body.get("tools") and len(trailing) < len(body["messages"]):
+            # A conversation that already has an assistant turn belongs to a process that
+            # is gone (swept while idle, or the gateway restarted). Starting a new one would
+            # replay its history as user text.
+            stats["claude_lost_sessions"] += 1
+            raise HTTPException(409, "The Claude session for this conversation has ended")
         else:
             session = ClaudeSession(body["model"])
             sessions[session.id] = session
