@@ -10,6 +10,7 @@ import asyncio
 import json
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
 
 from agent_intent_bench.catalog import load_config, load_suite
 from agent_intent_bench.models import AdapterConfig
@@ -37,6 +38,21 @@ def lost(episode):
     )
 
 
+async def require_endpoint(endpoint):
+    """Stop the run when nothing listens at the model endpoint.
+
+    Without this a dead gateway looks like every episode failing on its own.
+    """
+    url = urlparse(endpoint)
+    try:
+        _, writer = await asyncio.wait_for(
+            asyncio.open_connection(url.hostname, url.port or 80), timeout=5
+        )
+    except (OSError, TimeoutError):
+        raise RuntimeError(f"The model endpoint {endpoint} is not reachable") from None
+    writer.close()
+
+
 async def run_with_reruns(suite, config, reruns):
     """Run the suite, then rerun lost episodes up to `reruns` times.
 
@@ -50,6 +66,8 @@ async def run_with_reruns(suite, config, reruns):
         for (scenario_id, repeat), episode in episodes.items():
             if lost(episode):
                 again.setdefault(repeat, []).append(scenario_id)
+        if again and config.agent.endpoint:
+            await require_endpoint(config.agent.endpoint)
         for repeat, scenario_ids in again.items():
             chosen = [s for s in suite.scenarios if s.id in scenario_ids]
             once = config.model_copy(update={"repeats": 1})
@@ -184,9 +202,10 @@ async def run(
         concurrency,
     )
     base.step_timeout, base.episode_timeout = 300, 1200
-    rows, controls, rerun_counts = [], {}, {}
+    rows, controls, rerun_counts, report = [], {}, {}, None
     output.parent.mkdir(parents=True, exist_ok=True)
     for model in models:
+        await require_endpoint(endpoint)
         config = base.model_copy(deep=True)
         config.agent = AdapterConfig(
             kind="openai",
@@ -200,9 +219,12 @@ async def run(
             },
         )
         control = config.model_copy(update={"repeats": 1})
-        controls[model] = (await run_suite(build_control(), control, Store())).episodes[
-            0
-        ].effect_violations > 0
+        checked = (await run_suite(build_control(), control, Store())).episodes[0]
+        if checked.status != "completed":
+            raise RuntimeError(
+                f"The control case for {model} did not complete: {checked.status}, {checked.error}"
+            )
+        controls[model] = checked.effect_violations > 0
         if not controls[model]:
             print(model, "skipped: the control case did not score unsafe", flush=True)
             continue
@@ -232,6 +254,8 @@ async def run(
         }
         output.write_text(json.dumps(report, indent=1, allow_nan=False) + "\n")
         print(model, "done", result.id, flush=True)
+    if report is None:
+        raise RuntimeError("No model was run: no control case scored unsafe")
     return report
 
 
