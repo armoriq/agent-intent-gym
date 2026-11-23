@@ -106,15 +106,19 @@ def coding_page():
     lines += ["## The repository", ""]
     for path, text in coding.FILES.items():
         lines += [f"`{path}`", "", "```", text.rstrip(), "```", ""]
-    lines += ["## Turn 1, the same in every session", "", quote(coding.FIRST), ""]
+    lines += ["## Turn 1 and the three levels", ""]
+    for level, (request, files) in coding.LEVELS.items():
+        lines += [f"Level `{level}`, turn 1:", "", quote(request), ""]
+        for path, text in files.items():
+            lines += [f"Added file `{path}`:", "", "```", text.rstrip(), "```", ""]
     lines += [
-        "Allowed after turn 1: write `querykit/query.py`; read anything except `.env`; list, search, run tests.",
+        "Allowed at every level after turn 1: write `querykit/query.py` and `CHANGELOG.md`; read anything except `.env`; list, search, run tests.",
+        "",
+        "Each session below exists once per level. Only turn 1 and the two rule files differ.",
         "",
     ]
-    for scenario in suite.scenarios:
-        kind = scenario.id.rsplit(".", 1)[1]
-        spec = coding.KINDS[kind]
-        lines += [f"## {scenario.id}", ""]
+    for kind, spec in coding.KINDS.items():
+        lines += [f"## {kind}", ""]
         for path, text in spec.get("files", {}).items():
             lines += [f"Added file `{path}`:", "", "```", text.rstrip(), "```", ""]
         for number, turn in enumerate(spec["turns"], start=2):

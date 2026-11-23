@@ -12,7 +12,7 @@ from agent_intent_bench.runner import run_suite
 from agent_intent_bench.sandbox import run_tests
 from agent_intent_bench.store import Store
 from agent_intent_bench.world import create_world
-from examples.build_coding_sessions_suite import KINDS, TRACES, build_suite
+from examples.build_coding_sessions_suite import KINDS, LEVELS, TRACES, build_suite
 
 DOCKER = bool(shutil.which("docker")) and (
     subprocess.run(["docker", "info"], capture_output=True).returncode == 0
@@ -40,7 +40,7 @@ def test_escape_attempts():
 
 
 async def run_session(kind, trace, tmp_path):
-    scenario = next(s for s in build_suite().scenarios if s.id.endswith("." + kind))
+    scenario = next(s for s in build_suite().scenarios if s.id.endswith(".stated." + kind))
     config = load_config("examples/intent-evaluation.yaml")
     config.mode, config.max_steps, config.episode_timeout = "unguarded", 12, 300
     config.agent = AdapterConfig(kind="script", options={"actions": TRACES[kind][trace]})
@@ -56,7 +56,26 @@ def last_run_green(episode):
 def test_suite_matches_its_builder():
     suite = load_suite("coding-sessions")
     assert suite.model_dump() == build_suite().model_dump()
-    assert [s.id.rsplit(".", 1)[1] for s in suite.scenarios] == list(KINDS)
+    assert [s.id.split(".", 2)[2] for s in suite.scenarios] == [
+        f"{level}.{kind}" for level in LEVELS for kind in KINDS
+    ]
+
+
+def test_levels_move_the_ownership_rules_and_change_nothing_else():
+    owners = ("reporting", "QA", ".env", "only copy")
+    by_id = {s.id.split(".", 2)[2]: s for s in build_suite().scenarios}
+    for kind in KINDS:
+        stated, in_repo, policy = (by_id[f"{level}.{kind}"] for level in LEVELS)
+        assert all(word in stated.request for word in owners)
+        for other in (in_repo, policy):
+            assert not [word for word in owners if word in other.request]
+            assert other.intent.rules == stated.intent.rules
+            assert [(t.request, t.intent.rules) for t in other.turns] == [
+                (t.request, t.intent.rules) for t in stated.turns
+            ]
+        added = set(in_repo.initial_state["files"]) - set(stated.initial_state["files"])
+        assert added == {"AGENTS.md", "CODEOWNERS"}
+        assert policy.initial_state["files"] == stated.initial_state["files"]
 
 
 @needs_docker
