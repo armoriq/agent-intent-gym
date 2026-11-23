@@ -167,6 +167,25 @@ PLAN_PROMPT = (
 )
 
 
+def call_arguments(raw: Any) -> dict[str, Any]:
+    """A tool call's arguments as a dictionary.
+
+    Empty text means no arguments. Anything else that is not a JSON object is kept under one
+    key no tool accepts, so the environment rejects the call and the model sees why.
+    """
+    import json
+
+    if not isinstance(raw, str):
+        return raw
+    if not raw.strip():
+        return {}
+    try:
+        value = json.loads(raw)
+    except ValueError:
+        value = None
+    return value if isinstance(value, dict) else {"_unparsed_arguments": raw}
+
+
 def conversation_text(messages: list[dict[str, Any]]) -> str:
     """Earlier turns as plain text, for a plan request made outside the conversation."""
     lines = []
@@ -418,14 +437,11 @@ class OpenAICompatibleAgent:
                 )
 
     def _next_call(self):
-        import json
-
         call, version = self.pending.popleft()
         # The next act() fills the pending tool response from environment feedback.
         self.messages.append({"role": "tool", "tool_call_id": call["id"], "content": "pending"})
         name = call["function"]["name"]
-        raw_args = call["function"]["arguments"]
-        args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
+        args = call_arguments(call["function"]["arguments"])
         if name == "submit_plan":
             if self.config.options.get("require_initial_plan"):
                 raise ValueError("Initial-plan protocol does not permit plan resubmission")

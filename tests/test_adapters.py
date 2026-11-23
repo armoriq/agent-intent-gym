@@ -263,6 +263,34 @@ async def test_initial_plan_protocol_rejects_unsolicited_plan_expansion(scenario
         await agent.aclose()
 
 
+async def test_tool_arguments_that_are_not_json_reach_the_model_as_a_rejected_call(scenario):
+    sent = iter(["", "not json", ""])
+    names = iter(["payments__read_invoice", "payments__read_invoice", "finish"])
+
+    def handler(request):
+        call = {
+            "id": "c",
+            "type": "function",
+            "function": {"name": next(names), "arguments": next(sent)},
+        }
+        message = {"role": "assistant", "tool_calls": [call]}
+        return httpx.Response(200, json={"choices": [{"message": message}]})
+
+    agent = OpenAICompatibleAgent(
+        AdapterConfig(kind="openai", endpoint="http://test/v1", model="test-model")
+    )
+    await agent.client.aclose()
+    agent.client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    session = Session(scenario, RunConfig(), "arguments", 0)
+    try:
+        results = []
+        while not session.done:
+            results.append(await session.step(await agent.act(session.observation()), None))
+        assert [r["status"] for r in results] == ["ok", "invalid_action", "finished"]
+    finally:
+        await agent.aclose()
+
+
 def test_openai_agent_takes_its_system_prompt_from_options():
     from agent_intent_bench.adapters import OpenAICompatibleAgent
     from agent_intent_bench.models import AdapterConfig

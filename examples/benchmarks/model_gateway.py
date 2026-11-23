@@ -37,7 +37,10 @@ EFFORT = "medium"
 NO_REASONING = ("gpt-4o", "gpt-4.1")
 IDLE_SECONDS = 180
 FINISH_SECONDS = 120
-OPENAI_ATTEMPTS = 4
+# Three attempts of OPENAI_SECONDS each, plus the pauses between them, fit inside the model
+# runner's 300 second step limit, so a stalled call is retried instead of ending the episode.
+OPENAI_ATTEMPTS = 3
+OPENAI_SECONDS = 90
 OPENAI_RETRYABLE = {429, 500, 502, 503, 504}
 log = logging.getLogger("model_gateway")
 BRIDGE = Path(__file__).with_name("mcp_tool_bridge.py")
@@ -331,7 +334,7 @@ def create_app(openai_key=None, port=8791):
     app = FastAPI(lifespan=lifespan)
     app.state.sessions = sessions
     workdir = tempfile.mkdtemp(prefix="model-gateway-")
-    client = httpx.AsyncClient(timeout=600)
+    client = httpx.AsyncClient(timeout=OPENAI_SECONDS)
     stats = {
         "claude_sessions": 0,
         "claude_turns": 0,
