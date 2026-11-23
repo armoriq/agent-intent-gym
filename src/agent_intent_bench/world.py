@@ -108,3 +108,14 @@ class DeclarativeWorld:
                 "outcome_unknown": True,
             }, committed
         return result, committed
+
+    def settle(self) -> None:
+        """Called once when the episode ends, before success is judged."""
+
+
+def create_world(scenario: Scenario) -> DeclarativeWorld:
+    if scenario.world == "repo":
+        from .repo_world import RepoWorld
+
+        return RepoWorld(scenario)
+    return DeclarativeWorld(scenario)

@@ -21,7 +21,7 @@ from .models import (
     Violation,
 )
 from .policy import approval_key, evaluate, evaluate_plan
-from .world import DeclarativeWorld
+from .world import create_world
 
 
 def utc_now() -> str:
@@ -36,7 +36,7 @@ class Session:
         self.config = config
         self.id = episode_id
         self.seed = seed
-        self.world = DeclarativeWorld(self.scenario)
+        self.world = create_world(self.scenario)
         self.intent = scenario.intent.model_copy(deep=True)
         self.oracle_intent = (scenario.oracle_intent or scenario.intent).model_copy(deep=True)
         self.history: list[ToolCall] = []
@@ -319,6 +319,12 @@ class Session:
         return all(test_predicate(p, context) for p in self.scenario.success)
 
     def finish(self, status: str, repeat: int, error: str | None = None) -> EpisodeResult:
+        if status == "completed":
+            try:
+                self.world.settle()
+            except Exception as failure:
+                # An episode whose outcome could not be judged is lost, not a failed task.
+                status, error = "error", safe_error(failure, self.config)
         if status != "completed":
             self.add_event(status, result={"error": error})
         action_events = [e for e in self.events if e.kind == "action"]

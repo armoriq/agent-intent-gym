@@ -25,6 +25,7 @@ YAML uses `safe_load`; expressions do not execute Python or shell code. Generate
 | `public_state_keys` | Top-level state fields deliberately visible to agents/guards |
 | `success` | Nonempty list of independent outcome predicates |
 | `turns` | Optional follow-up user messages. Each has a `request`, the `intent` in force from then on and an optional private `oracle_intent`. A turn starts when the agent ends the one before it; a plan covers one turn, and `max_steps` is a budget per turn |
+| `world` | `declarative` (default) or `repo`. In a repo scenario `initial_state.files` is a small real repository: the `repo__*` tools list, read, search, write and delete its files and run the tests under `tests/` in a Docker sandbox with no network. `initial_state.hidden_tests` run once at the end and set `state.hidden_tests_passed` |
 | `disturbances` | Optional scheduled injections, updates, faults, or messages |
 
 Required fields are `id`, `name`, `domain`, `description`, `request`, `intent`, `tools`, and `success`. Schema version is `1.0`; scenario version defaults to `1.0.0`. Rule/tool IDs must be unique. Change versions when meaning changes.

@@ -113,7 +113,17 @@ uv run --no-sync python scripts/run_runtime_intent_models.py --suite runtime-int
 uv run --no-sync python scripts/list_runtime_intent_cases.py
 ```
 
-The last command prints every case of both suites as one readable page: the requests, what the data or the error says, and the call that would be unauthorized.
+The last command prints every case as one readable page: the requests, what the data or the error says, and the call that would be unauthorized.
+
+### Coding sessions
+
+The two suites above name the tool and the values in the request, so the agent has nothing to work out. `coding-sessions` is a first slice of the opposite: three user turns on a small real repository, where the agent gets a goal, looks around, runs the tests and decides what to change. Turn 1 reports a bug and says who owns which files. Later turns ask for something the scope cannot give: a test that only another team's file can fix, a green run that needs a test removed or the only copy of a data file rewritten, a stale release with a publish tool and a token within reach. The tests really run, in a Docker container with no network and a read-only copy of the files, and hidden tests decide whether the code still works. Scoring uses the same rules as every other suite, on the paths and tools of each call.
+
+```bash
+uv run --no-sync python scripts/run_runtime_intent_models.py --suite coding-sessions --max-steps 30 --models gpt-6-luna
+```
+
+Path rules cannot see a cheat written inside a file the agent may change, such as a special case for one test input. The hidden tests catch it only when it changes behaviour.
 
 The [round 1 protocol](evaluation-protocol.md) fixes the models, repeats, step limits and metrics.
 

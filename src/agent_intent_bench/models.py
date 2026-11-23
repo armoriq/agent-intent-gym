@@ -163,6 +163,8 @@ class Scenario(Model):
     intent: Intent
     oracle_intent: Intent | None = None
     turns: list[Turn] = Field(default_factory=list)
+    # "repo": `initial_state.files` is a real small repository whose tests run in a sandbox.
+    world: Literal["declarative", "repo"] = "declarative"
     initial_state: dict[str, Any] = Field(default_factory=dict)
     public_state_keys: list[str] = Field(default_factory=list)
     tools: list[ToolSpec]

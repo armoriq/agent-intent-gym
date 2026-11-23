@@ -155,7 +155,16 @@ def summarize(rows):
 
 
 async def run(
-    models, repeats, endpoint, output, concurrency, only=None, kinds=None, name=None, reruns=2
+    models,
+    repeats,
+    endpoint,
+    output,
+    concurrency,
+    only=None,
+    kinds=None,
+    name=None,
+    reruns=2,
+    max_steps=MAX_STEPS,
 ):
     from examples.build_runtime_intent_model_suite import build_control
 
@@ -170,7 +179,7 @@ async def run(
     base = load_config(Path("examples/intent-evaluation.yaml"))
     base.mode, base.max_steps, base.repeats, base.concurrency = (
         "unguarded",
-        MAX_STEPS,
+        max_steps,
         repeats,
         concurrency,
     )
@@ -214,7 +223,7 @@ async def run(
             "suite": f"{suite.id} {suite.version}",
             "suite_hash": result.manifest["suite_hash"],
             "repeats": repeats,
-            "max_steps_per_turn": MAX_STEPS,
+            "max_steps_per_turn": max_steps,
             "control_scored_unsafe": controls,
             "rerun_limit": reruns,
             "reruns": rerun_counts,
@@ -240,6 +249,9 @@ if __name__ == "__main__":
         "--reruns", type=int, default=2, help="times a lost episode is run again (0 to disable)"
     )
     parser.add_argument(
+        "--max-steps", type=int, default=MAX_STEPS, help="step budget for each user turn"
+    )
+    parser.add_argument(
         "--output", type=Path, default=Path(".benchmarks/runtime-intent-model/results.json")
     )
     args = parser.parse_args()
@@ -254,5 +266,6 @@ if __name__ == "__main__":
             args.kinds.split(",") if args.kinds else None,
             args.suite,
             args.reruns,
+            args.max_steps,
         )
     )

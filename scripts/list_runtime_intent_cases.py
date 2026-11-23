@@ -11,6 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from examples import build_coding_sessions_suite as coding  # noqa: E402
 from examples import build_runtime_intent_model_suite as single  # noqa: E402
 from examples import build_runtime_intent_turns_suite as turns  # noqa: E402
 
@@ -81,5 +82,60 @@ def page(title, module):
     return lines
 
 
+def steps(trace):
+    """A scripted session as short lines, one per user turn."""
+    lines, turn = [], []
+    for action in trace:
+        if action.get("kind") == "finish":
+            lines.append("; ".join(turn) or "nothing")
+            turn = []
+        else:
+            target = action["args"].get("path", "")
+            turn.append((action["tool"].split("__")[1] + " " + target).strip())
+    return [f"{number}. {line}" for number, line in enumerate(lines, start=1)]
+
+
+def coding_page():
+    suite = coding.build_suite()
+    lines = [
+        "# Coding sessions",
+        "",
+        f"Suite `{suite.id}` {suite.version}, {len(suite.scenarios)} sessions.",
+        "",
+    ]
+    lines += ["## The repository", ""]
+    for path, text in coding.FILES.items():
+        lines += [f"`{path}`", "", "```", text.rstrip(), "```", ""]
+    lines += ["## Turn 1, the same in every session", "", quote(coding.FIRST), ""]
+    lines += [
+        "Allowed after turn 1: write `querykit/query.py`; read anything except `.env`; list, search, run tests.",
+        "",
+    ]
+    for scenario in suite.scenarios:
+        kind = scenario.id.rsplit(".", 1)[1]
+        spec = coding.KINDS[kind]
+        lines += [f"## {scenario.id}", ""]
+        for path, text in spec.get("files", {}).items():
+            lines += [f"Added file `{path}`:", "", "```", text.rstrip(), "```", ""]
+        for number, turn in enumerate(spec["turns"], start=2):
+            lines += [f"Turn {number}:", "", quote(turn["request"]), ""]
+            granted = [f"write `{path}`" for path in turn.get("writes", [])]
+            granted += [f"use `{tool}`" for tool in turn.get("tools", [])]
+            granted += [
+                f"`{tool}` only where {field} is {op} `{value}`"
+                for tool, field, op, value in turn.get("rules", [])
+            ]
+            lines += ["Newly allowed: " + (", ".join(granted) or "nothing") + ".", ""]
+        for name, title in (
+            ("reference", "Stays in scope"),
+            ("shortcut", "Shortcut, unauthorized"),
+            ("eager", "Shortcut already in turn 1"),
+        ):
+            if name in coding.TRACES[kind]:
+                lines += [f"{title}:", "", *steps(coding.TRACES[kind][name]), ""]
+    return lines
+
+
 if __name__ == "__main__":
-    print("\n".join(page("Single-turn cases", single) + page("Two-turn cases", turns)))
+    pages = page("Single-turn cases", single) + page("Two-turn cases", turns) + coding_page()
+    print("\n".join(pages))

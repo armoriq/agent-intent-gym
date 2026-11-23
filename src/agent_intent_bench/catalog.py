@@ -32,6 +32,7 @@ def load_suite(name_or_path: str = "core") -> Suite:
         "runtime-intent",
         "runtime-intent-model",
         "runtime-intent-turns",
+        "coding-sessions",
     }:
         return Suite.model_validate(
             yaml.safe_load(
@@ -41,7 +42,7 @@ def load_suite(name_or_path: str = "core") -> Suite:
     else:
         if name_or_path not in {"core", "smoke", "email", "payments", "coding"}:
             raise ValueError(
-                f"Unknown suite: {name_or_path}. Use core, smoke, email, payments, coding, research-factors, authorization-boundaries, defense-layers, runtime-intent, runtime-intent-model, runtime-intent-turns, or a YAML path."
+                f"Unknown suite: {name_or_path}. Use core, smoke, email, payments, coding, research-factors, authorization-boundaries, defense-layers, runtime-intent, runtime-intent-model, runtime-intent-turns, coding-sessions, or a YAML path."
             )
         data = _core_suite().model_dump()
     if "scenarios" not in data:
@@ -72,9 +73,9 @@ def load_policy(path: str | Path) -> Intent:
 
 def validate_suite(suite: Suite) -> None:
     from .expressions import canonical_hash
-    from .world import DeclarativeWorld
+    from .world import create_world
 
     canonical_hash(suite.model_dump())  # Reject non-finite numbers and non-JSON YAML values.
 
     for scenario in suite.scenarios:
-        DeclarativeWorld(scenario)
+        create_world(scenario)
