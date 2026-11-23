@@ -49,6 +49,15 @@ class ArgumentRulesGuard:
         return await ReferenceGuard().evaluate(action, scoped)
 
 
+class CallRulesGuard(ArgumentRulesGuard):
+    """Argument rules on tool calls only. A plan is registered without being judged."""
+
+    async def evaluate(self, action, context):
+        if action.kind != "tool":
+            return Decision(action="allow", reason="call-rules:non-execution")
+        return await super().evaluate(action, context)
+
+
 class AllGuards:
     """Runs each guard in order; the first decision other than allow wins."""
 
@@ -66,6 +75,7 @@ class AllGuards:
 LAYERS = {
     "plan-tools": PlanToolsGuard,
     "argument-rules": ArgumentRulesGuard,
+    "call-rules": CallRulesGuard,
     "plan-exact": lambda: create_guard(AdapterConfig(kind="plan")),
 }
 
