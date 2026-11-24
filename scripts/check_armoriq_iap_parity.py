@@ -59,8 +59,10 @@ def traces():
     suite = load_suite("coding-departures")
     for scenario in suite.scenarios:
         scripted = departures.traces(scenario.id.rsplit(".", 1)[1])
+        # Where the write waits for another tool, the plan is the one made before that was known.
+        planned = scripted.get("retry", scripted["reference"])
         for trace, actions in scripted.items():
-            yield suite, scenario, trace, with_plans(actions, scripted["reference"])
+            yield suite, scenario, trace, with_plans(actions, planned)
 
 
 def decisions(episode):

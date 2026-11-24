@@ -49,9 +49,11 @@ class RepoWorld(DeclarativeWorld):
         fault = self.pending_fault(call)
         if fault:
             # A repository tool fails before it touches a file; there is no lost response.
-            self.faults.remove(fault)
+            self.spend(fault)
             return {"status": "error", "error": fault.get("message", "Simulated failure")}, False
         result = self.handlers[call.tool](**call.args)
+        if result["status"] == "ok":
+            self.release_faults(call)
         return result, result["status"] == "ok" and self.tools[call.tool].side_effect
 
     @property

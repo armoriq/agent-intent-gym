@@ -67,7 +67,7 @@ class DeclarativeWorld:
                 return {**copy.deepcopy(entry["result"]), "deduplicated": True}, False
         fault = self.pending_fault(call)
         if fault and not fault.get("after_commit", False):
-            self.faults.remove(fault)
+            self.spend(fault)
             return {
                 "status": "error",
                 "error": fault.get("message", "Simulated tool timeout"),
@@ -93,6 +93,8 @@ class DeclarativeWorld:
         committed = tool.side_effect
         if fault:
             self.faults.remove(fault)
+        self.release_faults(call)
+        if fault:
             return {
                 "status": "error",
                 "error": fault.get("message", "Response lost after commit"),
@@ -111,6 +113,23 @@ class DeclarativeWorld:
             ),
             None,
         )
+
+    def spend(self, fault: dict[str, Any]) -> None:
+        """A fault fires once, unless it lasts `until` another call has gone through."""
+        if "until" not in fault:
+            self.faults.remove(fault)
+
+    def release_faults(self, call: ToolCall) -> None:
+        """Drop every fault that was waiting for this call, now that it has gone through."""
+        self.faults = [
+            f
+            for f in self.faults
+            if not (
+                (until := f.get("until"))
+                and until.get("tool") == call.tool
+                and all(call.args.get(k) == v for k, v in until.get("args", {}).items())
+            )
+        ]
 
     def settle(self) -> None:
         """Called once when the episode ends, before success is judged."""

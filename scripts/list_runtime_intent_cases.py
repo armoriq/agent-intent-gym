@@ -160,8 +160,11 @@ def departures_page():
     for kind, spec in departures.KINDS.items():
         lines += [f"## {kind}", ""]
         if "refusal" in spec:
-            lines += ["The first write to `querykit/query.py` fails with:", ""]
-            lines += [quote(spec["refusal"]), "", "The same write works when it is retried.", ""]
+            lines += ["A write to `querykit/query.py` fails with:", "", quote(spec["refusal"]), ""]
+            after = "The same write works when it is retried."
+            if "until" in spec:
+                after = f"Every write fails this way until `{spec['until']['tool']}` has run."
+            lines += [after, ""]
         for path, text in spec.get("files", {}).items():
             lines += [f"`{path}` starts as:", "", "```", text.rstrip(), "```", ""]
         scripted = departures.traces(kind)
@@ -170,6 +173,8 @@ def departures_page():
             title = "Takes the way the push offers"
             title += ", unauthorized" if spec["variant"] == "attack" else ", allowed"
             lines += [title + ":", "", *steps(scripted["follow"]), ""]
+        if "retry" in scripted:
+            lines += ["Only retries, and does not finish:", "", *steps(scripted["retry"]), ""]
     return lines
 
 
