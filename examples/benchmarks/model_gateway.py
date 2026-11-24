@@ -311,28 +311,63 @@ class ClaudeSession:
             self.process.kill()
         if self.reader:
             self.reader.cancel()
+        # A request still waiting on this session gets "exited without a reply", not silence.
+        self.events.put_nowait(("reply", None))
 
 
-def create_app(openai_key=None, port=8791):
+async def sweep_idle(sweep, pause):
+    """Run `sweep` every `pause` seconds for as long as the gateway lives."""
+    while True:
+        await asyncio.sleep(pause)
+        try:
+            sweep()
+        except Exception:
+            # One failed sweep must not end sweeping: idle processes would pile up unseen.
+            log.exception("sweep failed")
+
+
+class Gateway(uvicorn.Server):
+    """A server that ends its Claude processes as soon as it is told to stop.
+
+    uvicorn waits for open requests and connections before it runs the app's shutdown, and
+    a waiting tool call or a live `claude` child keeps one open for good.
+    """
+
+    def __init__(self, config, close_sessions):
+        super().__init__(config)
+        self.close_sessions = close_sessions
+
+    def handle_exit(self, sig, frame):
+        try:
+            asyncio.get_running_loop().call_soon_threadsafe(self.close_sessions)
+        except RuntimeError:
+            self.close_sessions()
+        super().handle_exit(sig, frame)
+
+
+def create_app(openai_key=None, port=8791, idle_seconds=IDLE_SECONDS, sweep_seconds=30):
     # pending: a tool call waiting for its result. parked: a finished turn waiting for the
     # user's next message. Both are keyed by the call id handed to the agent adapter.
     sessions, pending, parked = {}, {}, {}
 
-    async def sweep_idle():
-        while True:
-            await asyncio.sleep(30)
-            sweep()
+    def close_sessions():
+        for session in list(sessions.values()):
+            session.stop()
+        for _, future in pending.values():
+            future.cancel()
+        for table in (sessions, pending, parked):
+            table.clear()
 
     @asynccontextmanager
     async def lifespan(app):
-        sweeper = asyncio.create_task(sweep_idle())
+        sweeper = asyncio.create_task(sweep_idle(sweep, sweep_seconds))
         yield
         sweeper.cancel()
-        for session in sessions.values():
-            session.stop()
+        close_sessions()
 
     app = FastAPI(lifespan=lifespan)
     app.state.sessions = sessions
+    app.state.close_sessions = close_sessions
     workdir = tempfile.mkdtemp(prefix="model-gateway-")
     client = httpx.AsyncClient(timeout=OPENAI_SECONDS)
     stats = {
@@ -345,7 +380,7 @@ def create_app(openai_key=None, port=8791):
     def sweep():
         waiting = {id(s) for s in parked.values()}
         for session in list(sessions.values()):
-            if time.monotonic() - session.touched <= IDLE_SECONDS:
+            if time.monotonic() - session.touched <= idle_seconds:
                 continue
             session.stop()
             sessions.pop(session.id, None)
@@ -435,7 +470,11 @@ def create_app(openai_key=None, port=8791):
     async def chat(request: Request):
         body = await request.json()
         if body["model"].startswith("claude-"):
-            return await claude_chat(body)
+            try:
+                return await claude_chat(body)
+            except HTTPException as error:
+                log.warning("claude %s: %s %s", body["model"], error.status_code, error.detail)
+                raise
         if not openai_key:
             raise HTTPException(500, "Start the gateway with --openai-key-file for gpt models")
         return await openai_chat(client, openai_key, body)
@@ -451,7 +490,17 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8791)
     parser.add_argument("--openai-key-file", type=Path)
+    parser.add_argument(
+        "--idle-seconds",
+        type=float,
+        default=IDLE_SECONDS,
+        help="stop a Claude process that has been idle this long",
+    )
     args = parser.parse_args()
     logging.basicConfig(level=logging.WARNING, format="%(asctime)s %(name)s %(message)s")
     key = args.openai_key_file.read_text().strip() if args.openai_key_file else None
-    uvicorn.run(create_app(key, args.port), host="127.0.0.1", port=args.port, log_level="warning")
+    app = create_app(key, args.port, args.idle_seconds)
+    config = uvicorn.Config(
+        app, host="127.0.0.1", port=args.port, log_level="warning", timeout_graceful_shutdown=10
+    )
+    Gateway(config, app.state.close_sessions).run()

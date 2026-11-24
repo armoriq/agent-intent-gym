@@ -155,3 +155,146 @@ async def test_a_second_user_turn_goes_to_the_same_claude_process(tmp_path, monk
         for session in app.state.sessions.values():
             session.stop()
         await client.aclose()
+
+
+def fake_claude(tmp_path, monkeypatch, body):
+    """Put a `claude` on PATH whose Python body follows a line that records its pid."""
+    import os
+    import sys
+
+    cli = tmp_path / "claude"
+    record = (
+        f"import os, pathlib; pathlib.Path({str(tmp_path / 'pid')!r}).write_text(str(os.getpid()))"
+    )
+    cli.write_text(f"#!{sys.executable}\n{record}\n{body}\n")
+    cli.chmod(0o755)
+    path = f"{tmp_path}{os.pathsep}{os.environ['PATH']}"
+    monkeypatch.setenv("PATH", path)
+    return path
+
+
+def alive(pid):
+    import os
+
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    return True
+
+
+CHAT = {"model": "claude-test", "messages": [{"role": "user", "content": "hi"}], "tools": TOOLS}
+REPLY_ONCE = FAKE_CLI.format(python="").split("\n", 1)[1]
+
+
+async def test_sweeping_goes_on_after_one_sweep_fails():
+    import asyncio
+
+    from examples.benchmarks.model_gateway import sweep_idle
+
+    calls = []
+
+    def sweep():
+        calls.append(len(calls))
+        if len(calls) == 1:
+            raise RuntimeError("first sweep fails")
+
+    task = asyncio.create_task(sweep_idle(sweep, 0.01))
+    await asyncio.sleep(0.2)
+    task.cancel()
+    assert len(calls) > 1
+
+
+async def test_an_idle_claude_process_is_stopped_while_the_gateway_runs(tmp_path, monkeypatch):
+    import asyncio
+
+    from examples.benchmarks.model_gateway import create_app
+
+    fake_claude(tmp_path, monkeypatch, REPLY_ONCE)
+    app = create_app(idle_seconds=1.5, sweep_seconds=0.05)
+    client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://gateway")
+    async with app.router.lifespan_context(app):
+        assert (await client.post("/v1/chat/completions", json=CHAT)).status_code == 200
+        pid = int((tmp_path / "pid").read_text())
+        assert alive(pid) and len(app.state.sessions) == 1
+        await asyncio.sleep(2.5)
+        assert not app.state.sessions
+        for _ in range(50):
+            if not alive(pid):
+                break
+            await asyncio.sleep(0.1)
+        assert not alive(pid)
+    await client.aclose()
+
+
+async def test_a_failed_claude_turn_is_logged_with_its_reason(tmp_path, monkeypatch, caplog):
+    from examples.benchmarks.model_gateway import create_app
+
+    fake_claude(tmp_path, monkeypatch, "")
+    app = create_app()
+    client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://gateway")
+    with caplog.at_level("WARNING", logger="model_gateway"):
+        response = await client.post("/v1/chat/completions", json=CHAT)
+    await client.aclose()
+    assert response.status_code == 502
+    assert "claude claude-test: 502 claude exited without a reply" in caplog.text
+
+
+def test_the_gateway_stops_on_sigterm_with_a_turn_still_waiting(tmp_path, monkeypatch):
+    import signal
+    import socket
+    import subprocess
+    import sys
+    import threading
+    import time
+
+    path = fake_claude(tmp_path, monkeypatch, "import time\ntime.sleep(600)")
+    with socket.socket() as free:
+        free.bind(("127.0.0.1", 0))
+        port = free.getsockname()[1]
+    gateway = subprocess.Popen(
+        [sys.executable, "examples/benchmarks/model_gateway.py", "--port", str(port)],
+        env={**__import__("os").environ, "PATH": path},
+    )
+    url = f"http://127.0.0.1:{port}"
+    try:
+        for _ in range(100):
+            try:
+                httpx.get(url + "/stats", timeout=1)
+                break
+            except httpx.TransportError:
+                time.sleep(0.1)
+        # A turn the model never answers keeps one request open.
+        waiting = threading.Thread(
+            target=lambda: httpx.post(url + "/v1/chat/completions", json=CHAT, timeout=60),
+            daemon=True,
+        )
+        waiting.start()
+        for _ in range(100):
+            if (tmp_path / "pid").exists() and httpx.get(url + "/stats").json()["claude_open"]:
+                break
+            time.sleep(0.1)
+        child = int((tmp_path / "pid").read_text())
+        assert alive(child)
+        gateway.send_signal(signal.SIGTERM)
+        # Sooner than uvicorn's own shutdown limit, which the gateway sets to 10 seconds.
+        assert gateway.wait(timeout=5) is not None
+        assert not alive(child)
+    finally:
+        if gateway.poll() is None:
+            gateway.kill()
+
+
+async def test_a_request_waiting_on_a_session_that_is_stopped_gets_an_error(tmp_path, monkeypatch):
+    import asyncio
+
+    from examples.benchmarks.model_gateway import create_app
+
+    fake_claude(tmp_path, monkeypatch, "import time\ntime.sleep(600)")
+    app = create_app(idle_seconds=0.3, sweep_seconds=0.05)
+    client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://gateway")
+    async with app.router.lifespan_context(app):
+        # The model never answers, so the sweep stops the process in the middle of the turn.
+        response = await asyncio.wait_for(client.post("/v1/chat/completions", json=CHAT), 10)
+    await client.aclose()
+    assert response.status_code == 502
