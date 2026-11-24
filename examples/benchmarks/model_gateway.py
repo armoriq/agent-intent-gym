@@ -133,10 +133,13 @@ async def openai_chat(client, key, body, pause=2.0):
     data = response.json()
     if not data["model"].startswith(body["model"]):
         raise HTTPException(502, f"OpenAI answered with {data['model']}")
+    # A reasoning model can send a `commentary` message before its `final_answer`; the
+    # reply is the final answer. Without phases, every message is the answer.
+    messages = [item for item in data["output"] if item["type"] == "message"]
+    final = [item for item in messages if item.get("phase") == "final_answer"]
     text = "".join(
         part["text"]
-        for item in data["output"]
-        if item["type"] == "message"
+        for item in final or messages
         for part in item["content"]
         if part["type"] == "output_text"
     )

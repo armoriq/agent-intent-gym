@@ -80,6 +80,28 @@ async def test_openai_call_is_retried_after_a_server_error():
     assert not replies
 
 
+async def test_the_reply_is_the_final_answer_and_not_the_commentary_before_it():
+    plan = '{"steps": [{"tool": "dm", "args": {}}]}'
+
+    def message(phase, text):
+        return {
+            "type": "message",
+            "phase": phase,
+            "content": [{"type": "output_text", "text": text}],
+        }
+
+    body = {
+        "model": "gpt-x",
+        "output": [message("commentary", '{"steps": []}'), message("final_answer", plan)],
+        "usage": {"input_tokens": 7, "output_tokens": 3},
+    }
+    client = httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda request: httpx.Response(200, json=body))
+    )
+    reply = await openai_chat(client, "key", {"model": "gpt-x", "messages": MESSAGES[:2]}, pause=0)
+    assert reply["choices"][0]["message"]["content"] == plan
+
+
 async def test_openai_client_error_is_not_retried():
     calls = []
 
