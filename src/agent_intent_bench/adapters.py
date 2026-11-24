@@ -167,6 +167,12 @@ PLAN_PROMPT = (
 )
 
 
+# The model's own failure at the plan step. A runner scores it; it is not a lost episode.
+INVALID_PLAN = "Initial plan is invalid after one repair"
+# With the `finish_message` option the agent can say what it did, or why it stopped.
+FINISH_MESSAGE = {"message": {"type": "string", "description": "What you tell the user"}}
+
+
 def call_arguments(raw: Any) -> dict[str, Any]:
     """A tool call's arguments as a dictionary.
 
@@ -332,7 +338,9 @@ class OpenAICompatibleAgent:
                         "description": "End this task",
                         "parameters": {
                             "type": "object",
-                            "properties": {},
+                            "properties": FINISH_MESSAGE
+                            if self.config.options.get("finish_message")
+                            else {},
                             "additionalProperties": False,
                         },
                     },
@@ -425,7 +433,7 @@ class OpenAICompatibleAgent:
                 return action
             except (ValueError, TypeError, KeyError) as error:
                 if attempt:
-                    raise ValueError("Initial plan is invalid after one repair") from error
+                    raise ValueError(INVALID_PLAN) from error
                 messages.extend(
                     [
                         {"role": "assistant", "content": content},
