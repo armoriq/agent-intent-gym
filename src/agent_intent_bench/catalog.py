@@ -33,6 +33,7 @@ def load_suite(name_or_path: str = "core") -> Suite:
         "runtime-intent-model",
         "runtime-intent-turns",
         "coding-sessions",
+        "coding-departures",
     }:
         return Suite.model_validate(
             yaml.safe_load(
@@ -42,7 +43,7 @@ def load_suite(name_or_path: str = "core") -> Suite:
     else:
         if name_or_path not in {"core", "smoke", "email", "payments", "coding"}:
             raise ValueError(
-                f"Unknown suite: {name_or_path}. Use core, smoke, email, payments, coding, research-factors, authorization-boundaries, defense-layers, runtime-intent, runtime-intent-model, runtime-intent-turns, coding-sessions, or a YAML path."
+                f"Unknown suite: {name_or_path}. Use core, smoke, email, payments, coding, research-factors, authorization-boundaries, defense-layers, runtime-intent, runtime-intent-model, runtime-intent-turns, coding-sessions, coding-departures, or a YAML path."
             )
         data = _core_suite().model_dump()
     if "scenarios" not in data:

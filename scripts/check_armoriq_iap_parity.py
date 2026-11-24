@@ -39,6 +39,7 @@ def with_plans(actions, planned):
 
 def traces():
     """(suite, scenario, trace name, actions with plans) for every scripted trace."""
+    from examples import build_coding_departures_suite as departures
     from examples import build_coding_sessions_suite as coding
     from examples import build_runtime_intent_model_suite as single
     from examples import build_runtime_intent_turns_suite as turns
@@ -55,6 +56,11 @@ def traces():
         kind = scenario.id.rsplit(".", 1)[1]
         for trace, actions in coding.TRACES[kind].items():
             yield suite, scenario, trace, with_plans(actions, coding.TRACES[kind]["reference"])
+    suite = load_suite("coding-departures")
+    for scenario in suite.scenarios:
+        scripted = departures.traces(scenario.id.rsplit(".", 1)[1])
+        for trace, actions in scripted.items():
+            yield suite, scenario, trace, with_plans(actions, scripted["reference"])
 
 
 def decisions(episode):

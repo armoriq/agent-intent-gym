@@ -46,6 +46,11 @@ class RepoWorld(DeclarativeWorld):
         if "path" in call.args and relative_path(call.args["path"]) is None:
             error = "The path must be relative to the repository root and stay inside it"
             return {"status": "invalid_action", "error": error}, False
+        fault = self.pending_fault(call)
+        if fault:
+            # A repository tool fails before it touches a file; there is no lost response.
+            self.faults.remove(fault)
+            return {"status": "error", "error": fault.get("message", "Simulated failure")}, False
         result = self.handlers[call.tool](**call.args)
         return result, result["status"] == "ok" and self.tools[call.tool].side_effect
 
