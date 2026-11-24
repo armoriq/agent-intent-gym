@@ -1,3 +1,7 @@
+import asyncio
+import json
+from pathlib import Path
+
 import httpx
 import pytest
 from fastapi import HTTPException
@@ -139,6 +143,7 @@ async def test_a_second_user_turn_goes_to_the_same_claude_process(tmp_path, monk
         message = first["choices"][0]["message"]
         (ended,) = message["tool_calls"]
         assert ended["function"]["name"] == "finish" and message["content"] == "turn 1: first"
+        assert ended["function"]["arguments"] == "{}"
         body["messages"] += [
             message,
             {"role": "tool", "tool_call_id": ended["id"], "content": "{}"},
@@ -185,6 +190,71 @@ def alive(pid):
 
 CHAT = {"model": "claude-test", "messages": [{"role": "user", "content": "hi"}], "tools": TOOLS}
 REPLY_ONCE = FAKE_CLI.format(python="").split("\n", 1)[1]
+
+
+FINISH = {
+    "type": "function",
+    "function": {
+        "name": "finish",
+        "parameters": {"type": "object", "properties": {"message": {"type": "string"}}},
+    },
+}
+# Records where its tool bridge is, then ends the turn once the file `go` exists.
+WAITS_FOR_GO = """
+import json, sys, time
+here = pathlib.Path(__file__).parent
+(here / "mcp").write_text(sys.argv[sys.argv.index("--mcp-config") + 1])
+sys.stdin.readline()
+while not (here / "go").exists():
+    time.sleep(0.02)
+print(json.dumps({"type": "result", "result": "Done.", "modelUsage": {"claude-test": {}}}), flush=True)
+"""
+
+
+async def ended_with(client, body):
+    reply = (await client.post("/v1/chat/completions", json=body)).json()
+    (ended,) = reply["choices"][0]["message"]["tool_calls"]
+    return ended["function"]["name"], json.loads(ended["function"]["arguments"])
+
+
+async def test_a_turn_that_ends_in_plain_text_carries_it_as_the_finish_message(
+    tmp_path, monkeypatch
+):
+    from examples.benchmarks.model_gateway import create_app
+
+    fake_claude(tmp_path, monkeypatch, REPLY_ONCE)
+    app = create_app()
+    client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://gateway")
+    try:
+        said = await ended_with(client, {**CHAT, "tools": [*TOOLS, FINISH]})
+        assert said == ("finish", {"message": "turn 1: hi"})
+    finally:
+        app.state.close_sessions()
+        await client.aclose()
+
+
+async def test_the_message_given_to_finish_wins_over_the_text_the_turn_ends_on(
+    tmp_path, monkeypatch
+):
+    from examples.benchmarks.model_gateway import create_app
+
+    fake_claude(tmp_path, monkeypatch, WAITS_FOR_GO)
+    app = create_app()
+    client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://gateway")
+    try:
+        turn = asyncio.create_task(ended_with(client, {**CHAT, "tools": [*TOOLS, FINISH]}))
+        while not (tmp_path / "mcp").exists():
+            await asyncio.sleep(0.02)
+        config = json.loads(Path((tmp_path / "mcp").read_text()).read_text())
+        bridge = config["mcpServers"]["gym"]["args"][-1]
+        call = {"name": "mcp__gym__finish", "arguments": {"message": "Fixed the bug."}}
+        answer = await client.post(bridge[bridge.index("/bridge/") :], json=call)
+        assert answer.json() == {"content": "The turn has ended."}
+        (tmp_path / "go").write_text("")
+        assert await turn == ("finish", {"message": "Fixed the bug."})
+    finally:
+        app.state.close_sessions()
+        await client.aclose()
 
 
 async def test_sweeping_goes_on_after_one_sweep_fails():

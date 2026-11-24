@@ -8,8 +8,9 @@ other MCP servers and slash commands switched off. One CLI process serves one ep
 across every user turn. The episode's tools reach the model as real tools through
 `mcp_tool_bridge.py`; each call is handed to the benchmark and its result is returned to the
 same process, so tool calls and history are native. Tool names carry the prefix `mcp__gym__`
-on that route. A turn that ends with plain text reaches the adapter as a `finish` call, and
-the process then waits for the next user message until it has been idle for IDLE_SECONDS.
+on that route. A turn that ends with plain text reaches the adapter as a `finish` call. When
+the request's `finish` tool takes a message, that call carries what the agent told the user:
+the message it gave `finish`, or else the text it ended on. The process then waits for the next user message until it has been idle for IDLE_SECONDS.
 
 Neither route accepts a temperature or a seed, so runs are repeated instead of seeded.
 The OpenAI key is read from a file given on the command line and never logged.
@@ -315,6 +316,15 @@ class ClaudeSession:
         self.events.put_nowait(("reply", None))
 
 
+def takes_message(body):
+    """Whether the request's `finish` tool has room for what the agent tells the user."""
+    return any(
+        tool["function"]["name"] == "finish"
+        and "message" in tool["function"].get("parameters", {}).get("properties", {})
+        for tool in body.get("tools") or []
+    )
+
+
 async def sweep_idle(sweep, pause):
     """Run `sweep` every `pause` seconds for as long as the gateway lives."""
     while True:
@@ -393,12 +403,14 @@ def create_app(openai_key=None, port=8791, idle_seconds=IDLE_SECONDS, sweep_seco
                         if isinstance(entry, tuple):
                             entry[1].cancel()
 
-    async def end_of_turn(session, body, reply, call_id):
+    async def end_of_turn(session, body, reply, call_id, said=None):
         """Hand the adapter a `finish` call it can answer when the user speaks again."""
         stats["claude_turns"] += 1
         parked[call_id] = session
         text = reply["result"].strip()
-        return completion(body["model"], text, [(call_id, "finish", "{}")], session.spent(reply))
+        arguments = {"message": said or text} if takes_message(body) else {}
+        ended = [(call_id, "finish", json.dumps(arguments))]
+        return completion(body["model"], text, ended, session.spent(reply))
 
     async def claude_chat(body):
         sweep()
@@ -441,7 +453,9 @@ def create_app(openai_key=None, port=8791, idle_seconds=IDLE_SECONDS, sweep_seco
             return await end_of_turn(session, body, event, call_id)
         name, arguments, future = event
         name = name.removeprefix(PREFIX)
+        said = None
         while name == "finish":
+            said = (arguments or {}).get("message") or said
             future.set_result("The turn has ended.")
             try:
                 kind, event = await asyncio.wait_for(session.next_event(), FINISH_SECONDS)
@@ -450,7 +464,7 @@ def create_app(openai_key=None, port=8791, idle_seconds=IDLE_SECONDS, sweep_seco
                 sessions.pop(session.id, None)
                 raise HTTPException(502, "claude did not end its turn after finish") from None
             if kind == "reply":
-                return await end_of_turn(session, body, event, call_id)
+                return await end_of_turn(session, body, event, call_id, said)
             name, arguments, future = event
             name = "finish"
         pending[call_id] = (session, future)
