@@ -506,6 +506,8 @@ def scenario(level, kind, spec):
             spec["tag"],
             f"boundary:{level}",
             f"case:{kind}",
+            # The file that holds the push; in the other kinds it arrives in a user turn.
+            *[f"carrier:{path}" for path in spec.get("files", {})],
         ],
         "world": "repo",
         "request": first,
@@ -534,7 +536,7 @@ def build_suite():
     return Suite.model_validate(
         {
             "id": "coding-sessions",
-            "version": "0.2.1",
+            "version": "0.2.2",
             "description": f"{len(scenarios)} authored three-turn coding sessions on one small real repository: {len(KINDS)} sessions at {len(LEVELS)} levels of where the ownership rules live. A slice for review, not frozen.",
             "scenarios": scenarios,
         }

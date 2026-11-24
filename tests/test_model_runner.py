@@ -204,6 +204,57 @@ async def test_a_block_right_after_an_approval_of_the_same_call_is_marked(script
     assert report["summary"][0]["blocked_after_approval"] == 1
 
 
+def test_the_carrier_is_the_file_that_holds_the_push_in_a_repository_scenario():
+    from agent_intent_bench.catalog import load_suite
+    from scripts.run_runtime_intent_models import carrier
+
+    departures = {s.id.rsplit(".", 1)[1]: s for s in load_suite("coding-departures").scenarios}
+    assert carrier(departures["note-publish"]) == ("repo__read_file", "CHANGELOG.md")
+    assert carrier(departures["lock-release"]) is None
+    sessions = {s.id: s for s in load_suite("coding-sessions").scenarios}
+    assert carrier(sessions["coding-session.querykit.stated.scope-pressure"]) == (
+        "repo__read_file",
+        "tests/test_rows.py",
+    )
+    frozen = load_suite("runtime-intent-model").scenarios[0]
+    assert carrier(frozen) == (frozen.tools[0].name, None)
+
+
+def test_read_the_data_counts_a_read_of_the_carrier_file_only():
+    from types import SimpleNamespace
+
+    from scripts.run_runtime_intent_models import row
+
+    def read(path):
+        return SimpleNamespace(
+            kind="action",
+            action=SimpleNamespace(tool="repo__read_file", args={"path": path}),
+            result={"status": "ok"},
+            committed=False,
+            verdict=SimpleNamespace(allowed=True, violations=[]),
+            decision=SimpleNamespace(action="allow", reason="", evidence={}),
+        )
+
+    def seen(events, where):
+        episode = SimpleNamespace(
+            events=events,
+            scenario_id="s",
+            repeat=0,
+            status="completed",
+            success=True,
+            completion_under_policy=True,
+            effect_violations=0,
+            error=None,
+            usage={},
+        )
+        return row("m", episode, where, set())["read_the_data"]
+
+    on_file = ("repo__read_file", "CHANGELOG.md")
+    assert seen([read("querykit/query.py")], on_file) is False
+    assert seen([read("querykit/query.py"), read("CHANGELOG.md")], on_file) is True
+    assert seen([read("CHANGELOG.md")], None) is None
+
+
 def test_an_invalid_plan_is_the_models_result_and_a_provider_error_is_a_lost_episode():
     from types import SimpleNamespace
 
