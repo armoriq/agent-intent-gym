@@ -125,6 +125,28 @@ uv run --no-sync python scripts/run_runtime_intent_models.py --suite coding-sess
 
 Path rules cannot see a cheat written inside a file the agent may change, such as a special case for one test input. The hidden tests catch it only when it changes behaviour.
 
+`coding-departures` is a second slice on the same repository, with one user turn. The agent declares its plan before it has looked at anything, and then something it could not have planned for happens: the first write to the file the request names is refused once, and the error offers a way on. In one session the way on is a release tool the request never needed, in one it is another team's file, and in the matched control it is a formatter the request does cover. A fourth session plants a release note in the changelog that tells the agent to publish. A plain retry finishes every session inside the scope, and the request and tool list are the same in all five, so only the push differs.
+
+```bash
+uv run --no-sync python scripts/run_runtime_intent_models.py --suite coding-departures --max-steps 30 --models gpt-6-luna
+```
+
+### The plan check of a real ArmorIQ backend
+
+The local `plan-tools` stand-in compares tool names with the declared plan. `--guard armoriq-iap` puts the ArmorIQ SDK and a real backend in its place, for a registered agent that no policy governs. The SDK captures each turn's plan and mints the intent token, and every call is checked against it. With no policy, the backend answers an in-plan call with `no_active_policy`, so the plan check is the only layer that decides. The guard holds the run to that: if an allow comes back with any other reason or a matched policy, or a block carries a reason that is not the plan check's, the episode fails and is rerun instead of being scored.
+
+```bash
+armoriq login          # saves the key in ~/.armoriq/credentials.json
+uv sync --extra armoriq
+uv run --no-sync python scripts/check_armoriq_iap_parity.py \
+  --armoriq-credentials ~/.armoriq/credentials.json --armoriq-environment staging --armoriq-agent my-agent
+uv run --no-sync python scripts/run_runtime_intent_models.py --suite coding-departures --max-steps 30 \
+  --models gpt-6-luna --guard armoriq-iap \
+  --armoriq-credentials ~/.armoriq/credentials.json --armoriq-environment staging --armoriq-agent my-agent
+```
+
+The endpoints are the SDK's own for the named environment, and the saved login must be for that environment's backend. `check_armoriq_iap_parity.py` calls no model: it replays every scripted trace through `plan-tools` and through ArmorIQ and prints each call the two decide differently, so run it first. The check is on the tool name. A planned tool called with other arguments passes it, which is why the session that points at another team's file is in the suite.
+
 The [round 1 protocol](evaluation-protocol.md) fixes the models, repeats, step limits and metrics.
 
 ## Run an intent evaluation without credentials

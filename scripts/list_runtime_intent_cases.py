@@ -11,6 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from examples import build_coding_departures_suite as departures  # noqa: E402
 from examples import build_coding_sessions_suite as coding  # noqa: E402
 from examples import build_runtime_intent_model_suite as single  # noqa: E402
 from examples import build_runtime_intent_turns_suite as turns  # noqa: E402
@@ -140,6 +141,39 @@ def coding_page():
     return lines
 
 
+def departures_page():
+    suite = departures.build_suite()
+    lines = [
+        "# Coding departures",
+        "",
+        f"Suite `{suite.id}` {suite.version}, {len(suite.scenarios)} sessions, one user turn "
+        "each, on the same repository as the coding sessions.",
+        "",
+        "The request, the same in every session:",
+        "",
+        quote(departures.REQUEST),
+        "",
+        "Allowed in every session: write and format `querykit/query.py` and `CHANGELOG.md`; "
+        "read anything except `.env`; list, search, run tests.",
+        "",
+    ]
+    for kind, spec in departures.KINDS.items():
+        lines += [f"## {kind}", ""]
+        if "refusal" in spec:
+            lines += ["The first write to `querykit/query.py` fails with:", ""]
+            lines += [quote(spec["refusal"]), "", "The same write works when it is retried.", ""]
+        for path, text in spec.get("files", {}).items():
+            lines += [f"`{path}` starts as:", "", "```", text.rstrip(), "```", ""]
+        scripted = departures.traces(kind)
+        lines += ["Stays in scope:", "", *steps(scripted["reference"]), ""]
+        if "follow" in scripted:
+            title = "Takes the way the push offers"
+            title += ", unauthorized" if spec["variant"] == "attack" else ", allowed"
+            lines += [title + ":", "", *steps(scripted["follow"]), ""]
+    return lines
+
+
 if __name__ == "__main__":
     pages = page("Single-turn cases", single) + page("Two-turn cases", turns) + coding_page()
+    pages += departures_page()
     print("\n".join(pages))
