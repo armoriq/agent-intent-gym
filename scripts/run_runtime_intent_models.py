@@ -1,4 +1,4 @@
-"""Run language models on a run-time intent suite, with no guard or a local stand-in.
+"""Run language models on a run-time intent suite: no guard, a local stand-in, or ArmorIQ IAP.
 
 Models are reached through the local gateway (`examples/benchmarks/model_gateway.py`). Every
 model gets the same agent adapter, prompts, one plan per user turn and the same step limit
@@ -8,6 +8,7 @@ per turn. Neither provider accepts a seed, so each case is repeated instead.
 import argparse
 import asyncio
 import json
+import os
 import sys
 from pathlib import Path
 from urllib.parse import urlparse
@@ -15,6 +16,7 @@ from urllib.parse import urlparse
 from agent_intent_bench.catalog import load_config, load_suite
 from agent_intent_bench.models import AdapterConfig
 from agent_intent_bench.runner import run_suite
+from agent_intent_bench.settings import protection_identity
 from agent_intent_bench.store import Store
 
 MAX_STEPS = 16
@@ -31,9 +33,46 @@ PLAN_PROMPT = (
 # Local stand-ins, not products. plan-tools allows a call when its tool name is in the plan
 # of the current turn. path-rules applies the scenario's argument rules to every tool call.
 GUARDS = {"none": None, "plan-tools": ["plan-tools"], "path-rules": ["call-rules"]}
+# The ArmorIQ SDK against a real backend, for an agent that no policy governs: the plan check
+# is the only layer that decides, and the guard fails the episode if any other layer does.
+ARMORIQ_IAP = "armoriq-iap"
 
 
-def guard_config(name):
+def armoriq_login(credentials, environment, agent):
+    """Guard options from an `armoriq login` credentials file; the key goes to this process only.
+
+    The endpoints are the SDK's own for the named environment, and the saved login must be
+    for that environment's backend, so a staging key is never sent to production or back.
+    """
+    from armoriq_sdk._build_env import ENDPOINTS
+
+    saved = json.loads(Path(credentials).read_text())
+    profile = saved["profiles"][saved["active"]]
+    hosts = ENDPOINTS[environment]
+    if profile["backend"].rstrip("/") != hosts["backend"]:
+        raise ValueError(f"The saved login is for {profile['backend']}, not {hosts['backend']}")
+    os.environ["ARMORIQ_API_KEY"] = profile["apiKey"]
+    return {
+        "user_email": profile["email"],
+        "agent_id": agent,
+        **{name + "_endpoint": hosts[name] for name in ("backend", "iap", "proxy")},
+    }
+
+
+def guard_config(name, armoriq=None):
+    if name == ARMORIQ_IAP:
+        return AdapterConfig(
+            kind="armoriq",
+            options={
+                "sdk_mode": "sdk",
+                "iap_only": True,
+                # Tools run in the gym, so the whole wire name is the action.
+                "tool_name_mode": "agent",
+                "validity_seconds": 3600,
+                "timeout": 20,
+                **armoriq,
+            },
+        )
     return AdapterConfig(
         kind="python",
         factory="examples.benchmarks.runtime_intent:create_guard_stack",
@@ -136,6 +175,7 @@ def row(model, episode, carrier, side_effects):
         "blocked": [
             {
                 "turn": t,
+                "by": (e.decision.evidence or {}).get("adapter_precondition") or "guard",
                 "tool": e.action.tool,
                 "args": e.action.args
                 if "content" not in e.action.args
@@ -220,6 +260,7 @@ async def run(
     reruns=2,
     max_steps=MAX_STEPS,
     guard="none",
+    armoriq=None,
 ):
     from examples.build_runtime_intent_model_suite import build_control
 
@@ -239,7 +280,7 @@ async def run(
         concurrency,
     )
     if guard != "none":
-        base.guard = guard_config(guard)
+        base.guard = guard_config(guard, armoriq)
     base.step_timeout, base.episode_timeout = 300, 1200
     rows, controls, rerun_counts, report = [], {}, {}, None
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -284,6 +325,7 @@ async def run(
             "schema_version": "runtime-intent-model-study-2.0",
             "suite": f"{suite.id} {suite.version}",
             "guard": guard,
+            "protection": protection_identity(base.guard) if guard == ARMORIQ_IAP else None,
             "suite_hash": result.manifest["suite_hash"],
             "repeats": repeats,
             "max_steps_per_turn": max_steps,
@@ -316,11 +358,24 @@ if __name__ == "__main__":
     parser.add_argument(
         "--max-steps", type=int, default=MAX_STEPS, help="step budget for each user turn"
     )
-    parser.add_argument("--guard", choices=list(GUARDS), default="none")
+    parser.add_argument("--guard", choices=[*GUARDS, ARMORIQ_IAP], default="none")
+    parser.add_argument("--armoriq-credentials", type=Path, help="file `armoriq login` saved")
+    parser.add_argument("--armoriq-environment", choices=["staging", "production"])
+    parser.add_argument("--armoriq-agent", help="registered agent that no policy governs")
     parser.add_argument(
         "--output", type=Path, default=Path(".benchmarks/runtime-intent-model/results.json")
     )
     args = parser.parse_args()
+    armoriq = None
+    if args.guard == ARMORIQ_IAP:
+        if not (args.armoriq_credentials and args.armoriq_environment and args.armoriq_agent):
+            parser.error(
+                "--guard armoriq-iap needs --armoriq-credentials, --armoriq-environment "
+                "and --armoriq-agent"
+            )
+        armoriq = armoriq_login(
+            args.armoriq_credentials, args.armoriq_environment, args.armoriq_agent
+        )
     asyncio.run(
         run(
             args.models.split(","),
@@ -334,5 +389,6 @@ if __name__ == "__main__":
             args.reruns,
             args.max_steps,
             args.guard,
+            armoriq,
         )
     )

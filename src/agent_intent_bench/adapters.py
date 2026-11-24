@@ -540,6 +540,16 @@ class HTTPGuard:
         await self.client.aclose()
 
 
+# What the plan check itself blocks with: the SDK's own reason, the backend's, and the
+# backend's checks of a plan that changed during the session.
+PLAN_CHECK_BLOCKS = (
+    "tool-not-in-plan",
+    "tool_not_in_plan",
+    "intent_anchor_chain_",
+    "intent_step_proof_missing",
+)
+
+
 class ArmorIQGuard:
     """Native check-only integration: SDK sessions check; the gym executes synthetic tools.
 
@@ -573,6 +583,10 @@ class ArmorIQGuard:
         )
         if self.sdk_mode not in {"sdk", "local"}:
             raise ValueError("Native ArmorIQ evaluations support sdk or local checking modes")
+        if config.options.get("iap_only") and self.sdk_mode != "sdk":
+            raise ValueError(
+                "iap_only needs sdk checking mode: the backend names the deciding layer"
+            )
         key_env = config.api_key_env or "ARMORIQ_API_KEY"
         key = os.environ.get(key_env)
         if not key:
@@ -699,6 +713,17 @@ class ArmorIQGuard:
             raise RuntimeError("ArmorIQ has no applicable active benchmark policy")
         if (decision.action == "allow") != bool(decision.allowed):
             raise RuntimeError("ArmorIQ SDK returned an inconsistent enforcement decision")
+        if self.config.options.get("iap_only"):
+            reason = decision.reason or ""
+            by_plan_check = (
+                reason == "no_active_policy"
+                if decision.allowed
+                else reason.startswith(PLAN_CHECK_BLOCKS)
+            )
+            if not by_plan_check or decision.matched_policy or getattr(decision, "policy_id", None):
+                raise RuntimeError(
+                    f"ArmorIQ decided outside the plan check: {decision.action}, {reason[:120]}"
+                )
         return Decision(
             action=decision.action,
             reason=decision.reason or "",

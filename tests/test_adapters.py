@@ -302,3 +302,80 @@ def test_openai_agent_takes_its_system_prompt_from_options():
         options={"system_prompt": "Only this."},
     )
     assert OpenAICompatibleAgent(config).messages[0]["content"] == "Only this."
+
+
+def plan_check_guard(monkeypatch, decide, **options):
+    """An ArmorIQ guard in plan-check-only mode over a fake SDK session."""
+
+    class FakeSession:
+        def start_plan(self, tool_calls, goal=None):
+            pass
+
+        def check(self, name, args, user_email=None):
+            return types.SimpleNamespace(**decide(name))
+
+    class FakeClient:
+        def __init__(self, **kwargs):
+            pass
+
+        def for_user(self, email):
+            return self
+
+        def start_session(self, options):
+            return FakeSession()
+
+        def close(self):
+            pass
+
+    fake = types.ModuleType("armoriq_sdk")
+    fake.ArmorIQClient, fake.SessionOptions = FakeClient, lambda **kw: kw
+    monkeypatch.setitem(sys.modules, "armoriq_sdk", fake)
+    monkeypatch.setenv("ARMORIQ_API_KEY", "synthetic-key-for-test")
+    options = {"user_email": "tester@example.test", "iap_only": True, **options}
+    return ArmorIQGuard(AdapterConfig(kind="armoriq", options=options))
+
+
+ALLOWED = {"action": "allow", "allowed": True, "reason": "no_active_policy", "matched_policy": None}
+OUTSIDE = {
+    "action": "block",
+    "allowed": False,
+    "reason": "tool-not-in-plan: 'payments__refund' was not declared in the captured plan",
+    "matched_policy": None,
+}
+
+
+@pytest.mark.parametrize(
+    "decision",
+    [
+        {**ALLOWED, "reason": "allow:tools.payments"},
+        {**ALLOWED, "matched_policy": "finance-policy"},
+        {**OUTSIDE, "reason": "block:tools.default"},
+    ],
+)
+async def test_plan_check_only_fails_the_episode_when_another_layer_decides(
+    monkeypatch, scenario, decision
+):
+    guard = plan_check_guard(monkeypatch, lambda name: decision)
+    context = Session(scenario, RunConfig(), "native", 0).guard_context()
+    await guard.evaluate(Action(kind="plan", plan=[ToolCall(tool="payments__commit")]), context)
+    with pytest.raises(RuntimeError, match="outside the plan check"):
+        await guard.evaluate(Action(tool="payments__commit", args={}), context)
+
+
+async def test_plan_check_only_passes_the_plan_check_decisions_through(monkeypatch, scenario):
+    # The third is the backend refusing a step of a plan that changed during the session.
+    decide = {
+        "payments__commit": ALLOWED,
+        "payments__refund": OUTSIDE,
+        "payments__report": {**OUTSIDE, "reason": "intent_anchor_chain_rejected"},
+    }
+    guard = plan_check_guard(monkeypatch, decide.get)
+    context = Session(scenario, RunConfig(), "native", 0).guard_context()
+    await guard.evaluate(Action(kind="plan", plan=[ToolCall(tool="payments__commit")]), context)
+    seen = [(await guard.evaluate(Action(tool=tool, args={}), context)).action for tool in decide]
+    assert seen == ["allow", "block", "block"]
+
+
+def test_plan_check_only_refuses_the_local_checking_mode(monkeypatch):
+    with pytest.raises(ValueError, match="sdk checking mode"):
+        plan_check_guard(monkeypatch, lambda name: ALLOWED, sdk_mode="local")
