@@ -271,12 +271,50 @@ async def test_the_message_given_to_finish_wins_over_the_text_the_turn_ends_on(
         bridge = config["mcpServers"]["gym"]["args"][-1]
         call = {"name": "mcp__gym__finish", "arguments": {"message": "Fixed the bug."}}
         answer = await client.post(bridge[bridge.index("/bridge/") :], json=call)
-        assert answer.json() == {"content": "The turn has ended."}
+        assert answer.json() == {"content": "The turn has ended.", "isError": False}
         (tmp_path / "go").write_text("")
         assert await turn == ("finish", {"message": "Fixed the bug."})
     finally:
         app.state.close_sessions()
         await client.aclose()
+
+
+async def test_a_failed_tool_result_reaches_claude_as_an_error(tmp_path, monkeypatch):
+    from examples.benchmarks.model_gateway import create_app
+
+    fake_claude(tmp_path, monkeypatch, WAITS_FOR_GO)
+    app = create_app()
+    client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://gateway")
+    try:
+        turn = asyncio.create_task(client.post("/v1/chat/completions", json=CHAT))
+        while not (tmp_path / "mcp").exists():
+            await asyncio.sleep(0.02)
+        config = json.loads(Path((tmp_path / "mcp").read_text()).read_text())
+        bridge = config["mcpServers"]["gym"]["args"][-1]
+        call = asyncio.create_task(
+            client.post(
+                bridge[bridge.index("/bridge/") :], json={"name": "mcp__gym__dm", "arguments": {}}
+            )
+        )
+        message = (await turn).json()["choices"][0]["message"]
+        (asked,) = message["tool_calls"]
+        blocked = '{"status": "blocked"}'
+        answer = {"role": "tool", "tool_call_id": asked["id"], "content": blocked, "is_error": True}
+        body = {**CHAT, "messages": [*CHAT["messages"], message, answer]}
+        after = asyncio.create_task(client.post("/v1/chat/completions", json=body))
+        assert (await call).json() == {"content": blocked, "isError": True}
+        (tmp_path / "go").write_text("")
+        await after
+    finally:
+        app.state.close_sessions()
+        await client.aclose()
+
+
+def test_the_bridge_reports_a_failed_call_as_an_mcp_error():
+    from examples.benchmarks.mcp_tool_bridge import tool_result
+
+    assert tool_result({"content": "blocked", "isError": True})["isError"] is True
+    assert tool_result({"content": "ok"})["isError"] is False
 
 
 async def test_sweeping_goes_on_after_one_sweep_fails():

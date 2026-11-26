@@ -192,6 +192,27 @@ def call_arguments(raw: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {"_unparsed_arguments": raw}
 
 
+# Results the agent should read as a failed call, as a real tool host reports them.
+FAILED = {
+    "blocked",
+    "held",
+    "error",
+    "invalid_action",
+    "idempotency_conflict",
+    "precondition_failed",
+}
+
+
+def user_text(observation: dict[str, Any]) -> str:
+    """What the user says at the start of a turn: the request, as a person would write it."""
+    import json
+
+    text = observation.get("request") or ""
+    if "intent" in observation:
+        text += "\n\nAuthorized intent:\n" + json.dumps(observation["intent"], ensure_ascii=False)
+    return text
+
+
 def conversation_text(messages: list[dict[str, Any]]) -> str:
     """Earlier turns as plain text, for a plan request made outside the conversation."""
     lines = []
@@ -239,6 +260,8 @@ class OpenAICompatibleAgent:
         ]
         self.usage = {"input_tokens": 0, "output_tokens": 0}
         self.planned_turn = -1
+        self.told_turn = -1
+        self.seen_messages = 0
 
     async def act(self, observation: dict[str, Any]) -> Action:
         import json
@@ -247,9 +270,10 @@ class OpenAICompatibleAgent:
             self.messages[-1].get("role") == "tool"
             and self.messages[-1].get("content") == "pending"
         ):
-            self.messages[-1]["content"] = json.dumps(
-                observation.get("last_result"), ensure_ascii=False
-            )
+            result = observation.get("last_result")
+            self.messages[-1]["content"] = json.dumps(result, ensure_ascii=False)
+            if isinstance(result, dict) and result.get("status") in FAILED:
+                self.messages[-1]["is_error"] = True
         turn = observation.get("turn", 0)
         if self.config.options.get("require_initial_plan") and turn != self.planned_turn:
             # Calls a model batched after the one that ended the turn are answered, not run.
@@ -265,9 +289,15 @@ class OpenAICompatibleAgent:
             return await self._declare_plan(observation, turn)
         if self.pending:
             return self._next_call()
-        self.messages.append(
-            {"role": "user", "content": json.dumps(observation, ensure_ascii=False)}
-        )
+        # The user speaks once per turn, in plain text. Tool results stay in the tool role.
+        if turn != self.told_turn:
+            self.messages.append({"role": "user", "content": user_text(observation)})
+            self.told_turn = turn
+        news = observation.get("messages", [])[self.seen_messages :]
+        self.seen_messages = len(observation.get("messages", []))
+        said = [f"[{m['source']}] {m['text']}" for m in news if m.get("source") != "user"]
+        if said:
+            self.messages.append({"role": "user", "content": "\n".join(said)})
         tools = [
             {
                 "type": "function",

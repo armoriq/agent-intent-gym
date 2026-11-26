@@ -12,6 +12,14 @@ import sys
 import urllib.request
 
 
+def tool_result(reply):
+    """The MCP result for the gateway's reply; a blocked or failed call is an error."""
+    return {
+        "content": [{"type": "text", "text": reply["content"]}],
+        "isError": bool(reply.get("isError")),
+    }
+
+
 def main(tools_path, call_url):
     tools = json.load(open(tools_path))
     for line in sys.stdin:
@@ -47,8 +55,7 @@ def main(tools_path, call_url):
             ).encode()
             request = urllib.request.Request(call_url, body, {"Content-Type": "application/json"})
             with urllib.request.urlopen(request, timeout=1800) as response:
-                text = json.load(response)["content"]
-            result = {"content": [{"type": "text", "text": text}], "isError": False}
+                result = tool_result(json.load(response))
         else:
             result = {}
         sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": request_id, "result": result}) + "\n")

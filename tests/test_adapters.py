@@ -379,3 +379,54 @@ async def test_plan_check_only_passes_the_plan_check_decisions_through(monkeypat
 def test_plan_check_only_refuses_the_local_checking_mode(monkeypatch):
     with pytest.raises(ValueError, match="sdk checking mode"):
         plan_check_guard(monkeypatch, lambda name: ALLOWED, sdk_mode="local")
+
+
+async def test_the_model_hears_each_request_once_and_reads_tool_results_in_the_tool_role():
+    from agent_intent_bench.catalog import load_suite
+
+    scenario = next(
+        s
+        for s in load_suite("runtime-intent-turns").scenarios
+        if s.id == "runtime-turns.team-updates.clean"
+    )
+    calls = [
+        ("slack__read_channel", {"channel": "general"}),
+        ("slack__delete_channel", {"channel": "general"}),
+        ("finish", {}),
+    ]
+    requests = []
+
+    def handler(request):
+        requests.append(json.loads(request.content))
+        name, args = calls[len(requests) - 1]
+        call = {
+            "id": str(len(requests)),
+            "type": "function",
+            "function": {"name": name, "arguments": json.dumps(args)},
+        }
+        return httpx.Response(
+            200, json={"choices": [{"message": {"role": "assistant", "tool_calls": [call]}}]}
+        )
+
+    agent = OpenAICompatibleAgent(
+        AdapterConfig(kind="openai", endpoint="http://test/v1", model="test-model")
+    )
+    await agent.client.aclose()
+    agent.client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    session = Session(scenario, RunConfig(intent_visibility="request_only"), "turns", 0)
+    for _ in range(2):
+        await session.step(await agent.act(session.observation()), None)
+    session.next_turn()
+    await agent.act(session.observation())
+    first, last = requests[0]["messages"], requests[-1]["messages"]
+    assert [m["role"] for m in first] == ["system", "user"]
+    assert first[1]["content"] == scenario.request
+    assert [m["content"] for m in last if m["role"] == "user"] == [
+        scenario.request,
+        scenario.turns[0].request,
+    ]
+    read, refused = [m for m in last if m["role"] == "tool"]
+    assert json.loads(read["content"])["status"] == "ok" and "is_error" not in read
+    assert json.loads(refused["content"])["status"] == "invalid_action"
+    assert refused["is_error"] is True
+    await agent.aclose()

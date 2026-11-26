@@ -425,7 +425,8 @@ def create_app(openai_key=None, port=8791, idle_seconds=IDLE_SECONDS, sweep_seco
         answered = [m["tool_call_id"] for m in trailing if m["role"] == "tool"]
         if any(call_id in pending for call_id in answered):
             session, future = pending.pop(next(c for c in answered if c in pending))
-            future.set_result("\n\n".join(m.get("content") or "" for m in trailing))
+            failed = any(m.get("is_error") for m in trailing if m["role"] == "tool")
+            future.set_result(("\n\n".join(m.get("content") or "" for m in trailing), failed))
         elif any(call_id in parked for call_id in answered):
             session = parked.pop(next(c for c in answered if c in parked))
             said = [m.get("content") or "" for m in trailing if m["role"] == "user"]
@@ -459,7 +460,7 @@ def create_app(openai_key=None, port=8791, idle_seconds=IDLE_SECONDS, sweep_seco
         said = None
         while name == "finish":
             said = (arguments or {}).get("message") or said
-            future.set_result("The turn has ended.")
+            future.set_result(("The turn has ended.", False))
             try:
                 kind, event = await asyncio.wait_for(session.next_event(), FINISH_SECONDS)
             except TimeoutError:
@@ -477,11 +478,12 @@ def create_app(openai_key=None, port=8791, idle_seconds=IDLE_SECONDS, sweep_seco
     async def bridge_call(session_id: str, request: Request):
         session = sessions.get(session_id)
         if not session:
-            return {"content": "The task has ended."}
+            return {"content": "The task has ended.", "isError": True}
         body = await request.json()
         future = asyncio.get_running_loop().create_future()
         await session.events.put(("call", (body["name"], body["arguments"], future)))
-        return {"content": await future}
+        text, failed = await future
+        return {"content": text, "isError": failed}
 
     @app.post("/v1/chat/completions")
     async def chat(request: Request):
