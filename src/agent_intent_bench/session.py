@@ -295,7 +295,8 @@ class Session:
         return copy.deepcopy(result)
 
     def next_turn(self) -> None:
-        """The user sends the next request: new authorization, no plan, no approvals."""
+        """The user sends the next request: new authorization and no approvals. The plan the
+        agent registered stays in force until it registers another, as the product keeps it."""
         turn = self.scenario.turns[self.turn]
         version = self.intent.version + 1
         self.intent = turn.intent.model_copy(update={"version": version}, deep=True)
@@ -305,7 +306,6 @@ class Session:
         self.turn += 1
         self.turn_start = self.step_index + 1
         self.request = turn.request
-        self.plan = []
         self.approvals.clear()
         self.messages.append({"source": "user", "text": turn.request})
         self.add_event("turn", result={"turn": self.turn, "request": turn.request})

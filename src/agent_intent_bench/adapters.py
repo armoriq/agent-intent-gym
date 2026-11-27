@@ -291,8 +291,8 @@ class OpenAICompatibleAgent:
         self.told_turn = -1
         self.seen_messages = 0
         self.request = ""
-        # The last plan the guard accepted in the current turn, in the product's shape, and
-        # the one this agent sent and is waiting on.
+        # The last plan the guard accepted, in the product's shape, and the one this agent sent
+        # and is waiting on. Like the product, a new user turn keeps the accepted plan.
         self.registered: dict[str, Any] | None = None
         self.proposed: dict[str, Any] | None = None
 
@@ -326,7 +326,6 @@ class OpenAICompatibleAgent:
                 )
             # The user speaks once per turn, in plain text. Tool results stay in the tool role.
             self.request = observation.get("request") or ""
-            self.registered = self.proposed = None
             text = user_text(observation)
             if self.config.options.get("intent_loop"):
                 text += "\n\n<system-reminder>\n" + INTENT_DIRECTIVE + "\n</system-reminder>"
@@ -470,6 +469,8 @@ class OpenAICompatibleAgent:
                     f"Plan not registered: {problem}. Use tool names from your tool list."
                 )
                 answer["is_error"] = True
+                # The session never sees this registration, so the count travels with the usage.
+                self.usage["plans_refused"] = self.usage.get("plans_refused", 0) + 1
                 return None
             goal = str(args.get("goal") or "")
             self.proposed = {"goal": goal, "steps": steps}

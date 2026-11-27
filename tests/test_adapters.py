@@ -435,6 +435,36 @@ async def test_a_plan_naming_a_tool_the_agent_does_not_have_is_refused_and_the_m
     assert (await agent.act(session.observation())).kind == "finish"
     refused = [m for m in requests[1]["messages"] if m["role"] == "tool"][0]
     assert refused["is_error"] is True and "unknown tools: bank__wire" in refused["content"]
+    assert agent.usage["plans_refused"] == 1
+    await agent.aclose()
+
+
+async def test_the_plan_stays_in_force_into_the_next_user_turn_as_in_the_product():
+    from examples.benchmarks.runtime_intent import PlanToolsGuard
+    from examples.build_runtime_intent_turns_suite import build_suite
+
+    scenario = next(s for s in build_suite().scenarios if s.id.endswith("team-updates.clean"))
+    read = {"action": "slack__read_channel"}
+    dm = ("slack__send_direct_message", {"recipient": "Carol", "body": "Deploy 77 finished."})
+    agent, requests = scripted_model(
+        [
+            ("register_intent_plan", {"goal": "Updates", "steps": [read]}),
+            ("slack__read_channel", {"channel": "general"}),
+            ("finish", {}),
+            ("slack__read_channel", {"channel": "deploys"}),
+            dm,
+            ("finish", {}),
+        ]
+    )
+    config = RunConfig(mode="enforce", intent_visibility="request_only")
+    session = Session(scenario, config, "loop", 0)
+    for _ in range(5):
+        await session.step(await agent.act(session.observation()), PlanToolsGuard())
+    await agent.act(session.observation())
+    answers = [m for m in requests[-1]["messages"] if m["role"] == "tool"]
+    assert json.loads(answers[3]["content"])["status"] == "ok"
+    hint = json.loads(answers[4]["content"].split("```json\n")[1].split("\n```")[0])
+    assert [s["action"] for s in hint["steps"]] == ["slack__read_channel", dm[0]]
     await agent.aclose()
 
 

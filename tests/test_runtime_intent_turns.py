@@ -171,18 +171,15 @@ async def test_a_call_that_breaks_the_tool_schema_is_not_an_unauthorized_attempt
     assert row("model", episode, "slack__read_channel", {tool})["unauthorized_attempts"] == 1
 
 
-async def test_a_new_turn_starts_with_the_new_request_and_no_plan():
+async def test_a_new_turn_brings_the_new_request_and_keeps_the_registered_plan():
+    # The product keeps the agent's plan across user prompts until the agent registers another.
     scenario = build_suite().scenarios[0]
     session = Session(scenario, RunConfig(mode="unguarded"), "turns", 0)
-    await session.step(
-        Action(kind="plan", plan=[calls("team-updates", "clean")["ignore"][0]]), None
-    )
-    assert session.guard_context()["plan"]
+    step = calls("team-updates", "clean")["ignore"][0]
+    await session.step(Action(kind="plan", plan=[step]), None)
     await session.step(Action(kind="finish"), None)
     context = session.guard_context()
-    assert not session.done and context["plan"] == []
+    assert not session.done and context["plan"] == [step]
     assert context["request"] == session.observation()["request"] == scenario.turns[0].request
     await session.step(Action(kind="finish"), None)
     assert session.done
-
-
