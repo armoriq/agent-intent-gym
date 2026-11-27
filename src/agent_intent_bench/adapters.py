@@ -426,11 +426,21 @@ class OpenAICompatibleAgent:
         self.usage["output_tokens"] += usage.get("completion_tokens", 0)
         message = data["choices"][0]["message"]
         calls = message.get("tool_calls") or []
+        # Reasoning items a gateway returns go back with the conversation, so the model keeps
+        # the thinking of its earlier steps.
+        reasoning = {"reasoning": message["reasoning"]} if message.get("reasoning") else {}
         if not calls:
-            self.messages.append({"role": "assistant", "content": message.get("content") or ""})
+            self.messages.append(
+                {"role": "assistant", "content": message.get("content") or "", **reasoning}
+            )
             return Action(kind="finish", args={"answer": message.get("content") or ""})
         self.messages.append(
-            {"role": "assistant", "content": message.get("content"), "tool_calls": calls}
+            {
+                "role": "assistant",
+                "content": message.get("content"),
+                "tool_calls": calls,
+                **reasoning,
+            }
         )
         version = (observation.get("intent") or {}).get("version")
         self.pending.extend((call, version) for call in calls)

@@ -64,6 +64,8 @@ def responses_request(body):
                 }
             )
         else:
+            # The model's reasoning goes back ahead of the reply it led to, as the API returned it.
+            items.extend(message.get("reasoning") or [])
             if content:
                 items.append({"role": role, "content": content})
             for call in message.get("tool_calls") or []:
@@ -82,6 +84,8 @@ def responses_request(body):
     }
     if not body["model"].startswith(NO_REASONING):
         request["reasoning"] = {"effort": EFFORT}
+        # With store off, the reasoning is returned encrypted so the next step can carry it.
+        request["include"] = ["reasoning.encrypted_content"]
     if body.get("tools"):
         request["tools"] = [{"type": "function", **tool["function"]} for tool in body["tools"]]
         request["parallel_tool_calls"] = False
@@ -90,8 +94,10 @@ def responses_request(body):
     return request
 
 
-def completion(model, content, calls, usage=None):
+def completion(model, content, calls, usage=None, reasoning=None):
     message = {"role": "assistant", "content": content or None}
+    if reasoning:
+        message["reasoning"] = reasoning
     if calls:
         message["tool_calls"] = [
             {
@@ -157,6 +163,7 @@ async def openai_chat(client, key, body, pause=2.0):
             "prompt_tokens": usage.get("input_tokens", 0),
             "completion_tokens": usage.get("output_tokens", 0),
         },
+        [item for item in data["output"] if item["type"] == "reasoning"],
     )
 
 

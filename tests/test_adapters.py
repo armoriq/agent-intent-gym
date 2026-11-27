@@ -498,6 +498,28 @@ async def test_a_refused_plan_is_not_the_base_of_the_next_plan_to_register():
     await agent.aclose()
 
 
+async def test_the_reasoning_a_gateway_returns_goes_back_with_the_next_request():
+    thought = [{"type": "reasoning", "id": "rs_1", "encrypted_content": "opaque"}]
+    agent, requests = scripted_model(
+        [("register_intent_plan", {"goal": "Pay the bill", "steps": [READ]}), ("finish", {})]
+    )
+    send = agent.client._transport.handler
+
+    def with_reasoning(request):
+        reply = send(request)
+        body = json.loads(reply.content)
+        body["choices"][0]["message"]["reasoning"] = thought
+        return httpx.Response(200, json=body)
+
+    agent.client = httpx.AsyncClient(transport=httpx.MockTransport(with_reasoning))
+    session = Session(bill(), RunConfig(intent_visibility="request_only"), "loop", 0)
+    await session.step(await agent.act(session.observation()), None)
+    await agent.act(session.observation())
+    said = [m for m in requests[1]["messages"] if m["role"] == "assistant"]
+    assert said[0]["reasoning"] == thought
+    await agent.aclose()
+
+
 def test_a_rejected_chain_gets_no_plan_to_register():
     agent = OpenAICompatibleAgent(
         AdapterConfig(

@@ -102,6 +102,26 @@ async def test_the_reply_is_the_final_answer_and_not_the_commentary_before_it():
     assert reply["choices"][0]["message"]["content"] == plan
 
 
+async def test_the_reasoning_of_one_step_goes_back_to_openai_with_the_next():
+    thought = {"type": "reasoning", "id": "rs_1", "summary": [], "encrypted_content": "opaque"}
+    sent = []
+
+    def handler(request):
+        sent.append(json.loads(request.content))
+        call = {"type": "function_call", "call_id": "c1", "name": "dm", "arguments": "{}"}
+        return httpx.Response(200, json={"model": "gpt-x", "output": [thought, call], "usage": {}})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    first = await openai_chat(client, "key", {"model": "gpt-x", "messages": MESSAGES[:2]}, pause=0)
+    answer = {"role": "tool", "tool_call_id": "c1", "content": "sent"}
+    messages = [*MESSAGES[:2], first["choices"][0]["message"], answer]
+    await openai_chat(client, "key", {"model": "gpt-x", "messages": messages}, pause=0)
+    assert sent[0]["include"] == ["reasoning.encrypted_content"]
+    carried = [item.get("type") for item in sent[1]["input"]]
+    assert carried[-3:] == ["reasoning", "function_call", "function_call_output"]
+    assert sent[1]["input"][-3] == thought
+
+
 async def test_openai_client_error_is_not_retried():
     calls = []
 
