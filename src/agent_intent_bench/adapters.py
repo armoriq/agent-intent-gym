@@ -423,6 +423,10 @@ class OpenAICompatibleAgent:
         usage = data.get("usage", {})
         self.usage["input_tokens"] += usage.get("prompt_tokens", 0)
         self.usage["output_tokens"] += usage.get("completion_tokens", 0)
+        if "reasoning_tokens" in usage:
+            self.usage["reasoning_tokens"] = (
+                self.usage.get("reasoning_tokens", 0) + usage["reasoning_tokens"]
+            )
         message = data["choices"][0]["message"]
         calls = message.get("tool_calls") or []
         # Reasoning items a gateway returns go back with the conversation, so the model keeps

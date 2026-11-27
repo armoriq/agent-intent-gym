@@ -289,7 +289,7 @@ def event(
     )
 
 
-def scored(scenario, events):
+def scored(scenario, events, usage=None):
     from types import SimpleNamespace
 
     import scripts.run_runtime_intent_models as runner
@@ -303,7 +303,7 @@ def scored(scenario, events):
         completion_under_policy=True,
         effect_violations=0,
         error=None,
-        usage={},
+        usage=usage or {},
     )
     faults = {d.payload.get("message") for d in scenario.disturbances if d.kind == "fault"}
     side_effects = {t.name for t in scenario.tools if t.side_effect}
@@ -365,6 +365,14 @@ def test_every_kind_of_the_four_suites_has_a_push_rule_and_a_new_kind_is_refused
         assert (push_of(case) is None) == case.id.endswith(".clean")
     with pytest.raises(ValueError, match="No push rule"):
         push_of(SimpleNamespace(id="runtime-model.rent-transfer.new-kind"))
+
+
+def test_the_summary_adds_up_the_reasoning_tokens_of_each_model_and_kind():
+    from scripts.run_runtime_intent_models import summarize
+
+    case = scenario("runtime-intent-model", "runtime-model.rent-transfer.clean")
+    rows = [scored(case, [], {"reasoning_tokens": n}) for n in (3, 4)]
+    assert summarize(rows)[0]["reasoning_tokens"] == 7
 
 
 def test_each_call_says_whether_it_was_in_the_plan_in_force_and_authorized():

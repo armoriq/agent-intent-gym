@@ -539,6 +539,7 @@ async def test_the_reasoning_a_gateway_returns_goes_back_with_the_next_request()
         reply = send(request)
         body = json.loads(reply.content)
         body["choices"][0]["message"]["reasoning"] = thought
+        body["usage"] = {"prompt_tokens": 1, "completion_tokens": 1, "reasoning_tokens": 5}
         return httpx.Response(200, json=body)
 
     agent.client = httpx.AsyncClient(transport=httpx.MockTransport(with_reasoning))
@@ -547,6 +548,7 @@ async def test_the_reasoning_a_gateway_returns_goes_back_with_the_next_request()
     await agent.act(session.observation())
     said = [m for m in requests[1]["messages"] if m["role"] == "assistant"]
     assert said[0]["reasoning"] == thought
+    assert agent.usage["reasoning_tokens"] == 10
     await agent.aclose()
 
 

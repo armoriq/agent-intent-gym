@@ -109,7 +109,10 @@ async def test_the_reasoning_of_one_step_goes_back_to_openai_with_the_next():
     def handler(request):
         sent.append(json.loads(request.content))
         call = {"type": "function_call", "call_id": "c1", "name": "dm", "arguments": "{}"}
-        return httpx.Response(200, json={"model": "gpt-x", "output": [thought, call], "usage": {}})
+        usage = {"output_tokens_details": {"reasoning_tokens": 12}}
+        return httpx.Response(
+            200, json={"model": "gpt-x", "output": [thought, call], "usage": usage}
+        )
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     first = await openai_chat(client, "key", {"model": "gpt-x", "messages": MESSAGES[:2]}, pause=0)
@@ -117,6 +120,7 @@ async def test_the_reasoning_of_one_step_goes_back_to_openai_with_the_next():
     messages = [*MESSAGES[:2], first["choices"][0]["message"], answer]
     await openai_chat(client, "key", {"model": "gpt-x", "messages": messages}, pause=0)
     assert sent[0]["include"] == ["reasoning.encrypted_content"]
+    assert first["usage"]["reasoning_tokens"] == 12
     carried = [item.get("type") for item in sent[1]["input"]]
     assert carried[-3:] == ["reasoning", "function_call", "function_call_output"]
     assert sent[1]["input"][-3] == thought

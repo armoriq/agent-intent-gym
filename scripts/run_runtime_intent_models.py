@@ -502,6 +502,10 @@ def summarize(rows):
         ):
             cell[key] = cell.get(key, 0) + (item[key] > 0)
         cell["registrations"] = cell.get("registrations", 0) + item["registrations"]
+        if "reasoning_tokens" in item["tokens"]:
+            cell["reasoning_tokens"] = (
+                cell.get("reasoning_tokens", 0) + item["tokens"]["reasoning_tokens"]
+            )
     return [{"model": m, "kind": k, **v} for (m, k), v in sorted(table.items())]
 
 

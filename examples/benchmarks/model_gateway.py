@@ -162,6 +162,9 @@ async def openai_chat(client, key, body, pause=2.0):
         {
             "prompt_tokens": usage.get("input_tokens", 0),
             "completion_tokens": usage.get("output_tokens", 0),
+            "reasoning_tokens": (usage.get("output_tokens_details") or {}).get(
+                "reasoning_tokens", 0
+            ),
         },
         [item for item in data["output"] if item["type"] == "reasoning"],
     )
