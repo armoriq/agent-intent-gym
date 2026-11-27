@@ -256,6 +256,24 @@ def user_text(observation: dict[str, Any]) -> str:
     return text
 
 
+def plan_args(args: dict[str, Any]) -> dict[str, Any]:
+    """A register_intent_plan call's arguments in the canonical {goal, steps} shape."""
+    import json
+
+    def parsed(value):
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except ValueError:
+                return value
+        return value
+
+    wrapped = parsed(args.get("plan"))
+    if isinstance(wrapped, dict) and "steps" in wrapped and "steps" not in args:
+        args = {**wrapped, **{k: v for k, v in args.items() if k != "plan"}}
+    return {**args, "steps": parsed(args.get("steps"))}
+
+
 class OpenAICompatibleAgent:
     """Uses Chat Completions tool calling without binding the gym to a provider SDK.
 
@@ -273,6 +291,8 @@ class OpenAICompatibleAgent:
         self.config = config
         self.seed = seed
         self.pending = deque()
+        # Calls a model sent in the same response after a plan registration.
+        self.batched: set[str] = set()
         self.client = httpx.AsyncClient(
             timeout=config.options.get("request_timeout", 60), headers=_headers(config)
         )
@@ -312,6 +332,9 @@ class OpenAICompatibleAgent:
                 answer["is_error"] = True
                 if result.get("status") == "blocked" and self.config.options.get("intent_loop"):
                     answer["content"] = self._deny(result, observation.get("last_action") or {})
+                    if answer["tool_call_id"] in self.batched:
+                        # Judged before the model saw whether the plan it sent with it went in.
+                        self.usage["batched_blocked"] = self.usage.get("batched_blocked", 0) + 1
         turn = observation.get("turn", 0)
         if turn != self.told_turn:
             # Calls a model batched after the one that ended the turn are answered, not run.
@@ -423,6 +446,9 @@ class OpenAICompatibleAgent:
         usage = data.get("usage", {})
         self.usage["input_tokens"] += usage.get("prompt_tokens", 0)
         self.usage["output_tokens"] += usage.get("completion_tokens", 0)
+        if usage.get("calls_after_finish"):
+            # Calls the gateway answered as not run because the model had already finished.
+            self.usage.setdefault("calls_after_finish", []).extend(usage["calls_after_finish"])
         if "reasoning_tokens" in usage:
             self.usage["reasoning_tokens"] = (
                 self.usage.get("reasoning_tokens", 0) + usage["reasoning_tokens"]
@@ -447,6 +473,10 @@ class OpenAICompatibleAgent:
         )
         version = (observation.get("intent") or {}).get("version")
         self.pending.extend((call, version) for call in calls)
+        names = [call["function"]["name"] for call in calls]
+        if "register_intent_plan" in names:
+            first = names.index("register_intent_plan")
+            self.batched.update(call["id"] for call in calls[first + 1 :])
         return None
 
     def _next_call(self, observation: dict[str, Any]) -> Action | None:
@@ -458,23 +488,30 @@ class OpenAICompatibleAgent:
         name = call["function"]["name"]
         args = call_arguments(call["function"]["arguments"])
         if name == "register_intent_plan" and self.config.options.get("intent_loop"):
-            catalog = {t["name"] for t in observation["tools"]}
-            steps = args.get("steps") if isinstance(args.get("steps"), list) else []
-            unknown = sorted(
-                {
-                    str(step.get("action") if isinstance(step, dict) else step)
+            # ArmorClaude checks only the plan's shape: at least one step, each with an action
+            # name. Any action name is registered, as the product registers it. Like the
+            # product, it takes steps sent as a JSON string or the plan wrapped in `plan`.
+            args = plan_args(args)
+            steps = args.get("steps")
+            problem = (
+                "steps must be a non-empty list"
+                if not isinstance(steps, list) or not steps
+                else "every step needs an action name"
+                if not all(
+                    isinstance(step, dict)
+                    and isinstance(step.get("action"), str)
+                    and step["action"]
                     for step in steps
-                    if not isinstance(step, dict) or step.get("action") not in catalog
-                }
-            )
-            if not steps or unknown:
-                problem = "it has no steps" if not steps else "unknown tools: " + ", ".join(unknown)
-                answer["content"] = (
-                    f"Plan not registered: {problem}. Use tool names from your tool list."
                 )
+                else None
+            )
+            if problem:
+                answer["content"] = f"Plan rejected: {problem}"
                 answer["is_error"] = True
-                # The session never sees this registration, so the count travels with the usage.
-                self.usage["plans_refused"] = self.usage.get("plans_refused", 0) + 1
+                # The session never sees this attempt, so it travels with the usage.
+                self.usage.setdefault("plans_rejected", []).append(
+                    {"steps": steps, "reason": problem}
+                )
                 return None
             goal = str(args.get("goal") or "")
             self.proposed = {"goal": goal, "steps": steps}

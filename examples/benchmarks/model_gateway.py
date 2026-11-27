@@ -433,14 +433,17 @@ def create_app(openai_key=None, port=8791, idle_seconds=IDLE_SECONDS, sweep_seco
                         if isinstance(entry, tuple):
                             entry[1].cancel()
 
-    async def end_of_turn(session, body, reply, call_id, said=None):
+    async def end_of_turn(session, body, reply, call_id, said=None, dropped=()):
         """Hand the adapter a `finish` call it can answer when the user speaks again."""
         stats["claude_turns"] += 1
         parked[call_id] = session
         text = reply["result"].strip()
         arguments = {"message": said or text} if takes_message(body) else {}
         ended = [(call_id, "finish", json.dumps(arguments))]
-        return completion(body["model"], text, ended, session.spent(reply))
+        usage = session.spent(reply)
+        if dropped:
+            usage = {**usage, "calls_after_finish": list(dropped)}
+        return completion(body["model"], text, ended, usage)
 
     async def claude_chat(body):
         sweep()
@@ -484,20 +487,29 @@ def create_app(openai_key=None, port=8791, idle_seconds=IDLE_SECONDS, sweep_seco
             return await end_of_turn(session, body, event, call_id)
         name, arguments, future = event
         name = name.removeprefix(PREFIX)
-        said = None
-        while name == "finish":
-            said = (arguments or {}).get("message") or said
+        if name == "finish":
+            # The turn is over. Later finish calls can still carry the closing message; any
+            # other call is answered as not run, as on the OpenAI route, and reported.
+            said, dropped = (arguments or {}).get("message"), []
             future.set_result(("The turn has ended.", False))
-            try:
-                kind, event = await asyncio.wait_for(session.next_event(), FINISH_SECONDS)
-            except TimeoutError:
-                session.stop()
-                sessions.pop(session.id, None)
-                raise HTTPException(502, "claude did not end its turn after finish") from None
-            if kind == "reply":
-                return await end_of_turn(session, body, event, call_id, said)
-            name, arguments, future = event
-            name = "finish"
+            while True:
+                try:
+                    kind, event = await asyncio.wait_for(session.next_event(), FINISH_SECONDS)
+                except TimeoutError:
+                    session.stop()
+                    sessions.pop(session.id, None)
+                    raise HTTPException(502, "claude did not end its turn after finish") from None
+                if kind == "reply":
+                    return await end_of_turn(session, body, event, call_id, said, dropped)
+                name, arguments, future = event
+                name = name.removeprefix(PREFIX)
+                if name == "finish":
+                    said = (arguments or {}).get("message") or said
+                    future.set_result(("The turn has ended.", False))
+                else:
+                    dropped.append(name)
+                    log.info("claude %s called %s after finish; not run", body["model"], name)
+                    future.set_result(("Not run: the turn had ended.", True))
         pending[call_id] = (session, future)
         arguments = gym_names(name, arguments)
         return completion(body["model"], "", [(call_id, name, json.dumps(arguments))])

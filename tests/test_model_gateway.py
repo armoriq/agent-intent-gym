@@ -303,6 +303,37 @@ async def test_the_message_given_to_finish_wins_over_the_text_the_turn_ends_on(
         await client.aclose()
 
 
+async def test_a_call_after_finish_is_not_run_reported_and_keeps_the_finish_message(
+    tmp_path, monkeypatch
+):
+    from examples.benchmarks.model_gateway import create_app
+
+    fake_claude(tmp_path, monkeypatch, WAITS_FOR_GO)
+    app = create_app()
+    client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://gateway")
+    try:
+        body = {**CHAT, "tools": [*TOOLS, FINISH]}
+        turn = asyncio.create_task(client.post("/v1/chat/completions", json=body))
+        while not (tmp_path / "mcp").exists():
+            await asyncio.sleep(0.02)
+        config = json.loads(Path((tmp_path / "mcp").read_text()).read_text())
+        bridge = config["mcpServers"]["gym"]["args"][-1]
+        bridge = bridge[bridge.index("/bridge/") :]
+        done = {"name": "mcp__gym__finish", "arguments": {"message": "Fixed the bug."}}
+        await client.post(bridge, json=done)
+        late = {"name": "mcp__gym__report__submit", "arguments": {"message": "Submitted"}}
+        answer = await client.post(bridge, json=late)
+        assert answer.json() == {"content": "Not run: the turn had ended.", "isError": True}
+        (tmp_path / "go").write_text("")
+        reply = (await turn).json()
+        (ended,) = reply["choices"][0]["message"]["tool_calls"]
+        assert json.loads(ended["function"]["arguments"]) == {"message": "Fixed the bug."}
+        assert reply["usage"]["calls_after_finish"] == ["report__submit"]
+    finally:
+        app.state.close_sessions()
+        await client.aclose()
+
+
 async def test_a_failed_tool_result_reaches_claude_as_an_error(tmp_path, monkeypatch):
     from examples.benchmarks.model_gateway import create_app
 

@@ -424,18 +424,58 @@ async def test_the_agent_registers_its_plan_in_its_own_conversation_after_the_pr
     await agent.aclose()
 
 
-async def test_a_plan_naming_a_tool_the_agent_does_not_have_is_refused_and_the_model_asked_again():
+async def test_the_agent_registers_any_action_names_and_rejects_only_a_malformed_plan():
+    # ArmorClaude checks the plan's shape, not whether each action is a tool the agent has.
+    steps = [{"action": "ask_user"}, {"action": "bank__wire"}]
     agent, requests = scripted_model(
         [
-            ("register_intent_plan", {"goal": "Pay", "steps": [{"action": "bank__wire"}]}),
-            ("finish", {}),
+            ("register_intent_plan", {"goal": "Pay", "steps": []}),
+            ("register_intent_plan", {"goal": "Pay", "steps": json.dumps(steps)}),
         ]
     )
     session = Session(bill(), RunConfig(intent_visibility="request_only"), "loop", 0)
-    assert (await agent.act(session.observation())).kind == "finish"
-    refused = [m for m in requests[1]["messages"] if m["role"] == "tool"][0]
-    assert refused["is_error"] is True and "unknown tools: bank__wire" in refused["content"]
-    assert agent.usage["plans_refused"] == 1
+    action = await agent.act(session.observation())
+    assert [c.tool for c in action.plan] == ["ask_user", "bank__wire"]
+    rejected = [m for m in requests[1]["messages"] if m["role"] == "tool"][0]
+    assert rejected["is_error"] is True and rejected["content"].startswith("Plan rejected:")
+    assert agent.usage["plans_rejected"] == [
+        {"steps": [], "reason": rejected["content"].removeprefix("Plan rejected: ")}
+    ]
+    await agent.aclose()
+
+
+async def test_a_call_sent_with_a_registration_and_blocked_is_counted_apart():
+    from examples.benchmarks.runtime_intent import PlanToolsGuard
+
+    calls = [
+        ("register_intent_plan", {"goal": "Pay the bill", "steps": [READ]}),
+        (PAY["tool"], PAY["args"]),
+    ]
+
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        batch = [
+            {"id": str(i), "type": "function", "function": {"name": n, "arguments": json.dumps(a)}}
+            for i, (n, a) in enumerate(calls)
+        ]
+        usage = {"prompt_tokens": 1, "completion_tokens": 1}
+        if len(seen) == 1:
+            usage["calls_after_finish"] = ["x__late"]
+        message = {"role": "assistant", "tool_calls": batch}
+        return httpx.Response(200, json={"choices": [{"message": message}], "usage": usage})
+
+    agent, _ = scripted_model([])
+    agent.client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    config = RunConfig(mode="enforce", intent_visibility="request_only")
+    session = Session(bill(), config, "loop", 0)
+    for _ in range(2):
+        await session.step(await agent.act(session.observation()), PlanToolsGuard())
+    agent.pending.clear()
+    await agent.act(session.observation())
+    assert agent.usage["batched_blocked"] == 1
+    assert agent.usage["calls_after_finish"] == ["x__late"]
     await agent.aclose()
 
 
