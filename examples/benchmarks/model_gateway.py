@@ -99,13 +99,16 @@ def completion(model, content, calls, usage=None, reasoning=None):
     if reasoning:
         message["reasoning"] = reasoning
     if calls:
+        # A fourth element marks a call the model sent before it saw whether the plan it had
+        # just registered went in.
         message["tool_calls"] = [
             {
-                "id": call_id,
+                "id": call[0],
                 "type": "function",
-                "function": {"name": name, "arguments": arguments},
+                "function": {"name": call[1], "arguments": call[2]},
+                **({"batched_with_registration": True} if call[3:] and call[3] else {}),
             }
-            for call_id, name, arguments in calls
+            for call in calls
         ]
     return {
         "object": "chat.completion",
@@ -171,9 +174,15 @@ async def openai_chat(client, key, body, pause=2.0):
 
 
 def gym_names(name, arguments):
-    """A plan the agent registers names tools as Claude Code shows them, with the bridge's
-    prefix; the benchmark knows them without it, as it does the calls themselves."""
-    steps = arguments.get("steps") if isinstance(arguments, dict) else None
+    """A plan the agent registers, or a call it asks the user to approve, names tools as
+    Claude Code shows them, with the bridge's prefix; the benchmark knows them without it, as
+    it does the calls themselves."""
+    if not isinstance(arguments, dict):
+        return arguments
+    asked = arguments.get("action")
+    if name == "ask_user" and isinstance(asked, dict) and isinstance(asked.get("tool"), str):
+        return {**arguments, "action": {**asked, "tool": asked["tool"].removeprefix(PREFIX)}}
+    steps = arguments.get("steps")
     if name != "register_intent_plan" or not isinstance(steps, list):
         return arguments
     return {
@@ -244,6 +253,8 @@ class ClaudeSession:
         self.id = uuid.uuid4().hex[:12]
         self.model = model
         self.events = asyncio.Queue()
+        # Results of plan registrations not yet returned to the model.
+        self.registrations = []
         self.process = None
         self.reader = None
         self.counted = {"prompt_tokens": 0, "completion_tokens": 0}
@@ -485,7 +496,7 @@ def create_app(openai_key=None, port=8791, idle_seconds=IDLE_SECONDS, sweep_seco
             return completion(body["model"], text, [], session.spent(event))
         if kind == "reply":
             return await end_of_turn(session, body, event, call_id)
-        name, arguments, future = event
+        name, arguments, future, batched = event
         name = name.removeprefix(PREFIX)
         if name == "finish":
             # The turn is over. Later finish calls can still carry the closing message; any
@@ -501,7 +512,7 @@ def create_app(openai_key=None, port=8791, idle_seconds=IDLE_SECONDS, sweep_seco
                     raise HTTPException(502, "claude did not end its turn after finish") from None
                 if kind == "reply":
                     return await end_of_turn(session, body, event, call_id, said, dropped)
-                name, arguments, future = event
+                name, arguments, future, batched = event
                 name = name.removeprefix(PREFIX)
                 if name == "finish":
                     said = (arguments or {}).get("message") or said
@@ -512,7 +523,7 @@ def create_app(openai_key=None, port=8791, idle_seconds=IDLE_SECONDS, sweep_seco
                     future.set_result(("Not run: the turn had ended.", True))
         pending[call_id] = (session, future)
         arguments = gym_names(name, arguments)
-        return completion(body["model"], "", [(call_id, name, json.dumps(arguments))])
+        return completion(body["model"], "", [(call_id, name, json.dumps(arguments), batched)])
 
     @app.post("/bridge/{session_id}/call")
     async def bridge_call(session_id: str, request: Request):
@@ -521,7 +532,12 @@ def create_app(openai_key=None, port=8791, idle_seconds=IDLE_SECONDS, sweep_seco
             return {"content": "The task has ended.", "isError": True}
         body = await request.json()
         future = asyncio.get_running_loop().create_future()
-        await session.events.put(("call", (body["name"], body["arguments"], future)))
+        # The CLI can send calls side by side: a call that arrives while a registration is still
+        # unanswered was made before the model saw whether its plan went in.
+        batched = any(not waiting.done() for waiting in session.registrations)
+        if body["name"].removeprefix(PREFIX) == "register_intent_plan":
+            session.registrations.append(future)
+        await session.events.put(("call", (body["name"], body["arguments"], future, batched)))
         text, failed = await future
         return {"content": text, "isError": failed}
 

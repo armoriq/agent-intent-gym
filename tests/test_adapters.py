@@ -592,6 +592,38 @@ async def test_the_reasoning_a_gateway_returns_goes_back_with_the_next_request()
     await agent.aclose()
 
 
+async def test_a_call_the_gateway_marks_as_sent_with_a_registration_is_counted_when_blocked():
+    from examples.benchmarks.runtime_intent import PlanToolsGuard
+
+    replies = [
+        ("register_intent_plan", {"goal": "Pay the bill", "steps": [READ]}, False),
+        (PAY["tool"], PAY["args"], True),
+        ("finish", {}, False),
+    ]
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        name, args, batched = replies[len(seen) - 1]
+        call = {"id": str(len(seen)), "type": "function"}
+        call["function"] = {"name": name, "arguments": json.dumps(args)}
+        if batched:
+            call["batched_with_registration"] = True
+        message = {"role": "assistant", "tool_calls": [call]}
+        return httpx.Response(200, json={"choices": [{"message": message}]})
+
+    agent, _ = scripted_model([])
+    agent.client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    session = Session(
+        bill(), RunConfig(mode="enforce", intent_visibility="request_only"), "loop", 0
+    )
+    for _ in range(2):
+        await session.step(await agent.act(session.observation()), PlanToolsGuard())
+    await agent.act(session.observation())
+    assert agent.usage.get("batched_blocked") == 1
+    await agent.aclose()
+
+
 def test_a_rejected_chain_gets_no_plan_to_register():
     agent = OpenAICompatibleAgent(
         AdapterConfig(

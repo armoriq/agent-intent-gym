@@ -477,6 +477,8 @@ class OpenAICompatibleAgent:
         if "register_intent_plan" in names:
             first = names.index("register_intent_plan")
             self.batched.update(call["id"] for call in calls[first + 1 :])
+        # A gateway that hands over one call at a time marks the ones sent with a registration.
+        self.batched.update(call["id"] for call in calls if call.get("batched_with_registration"))
         return None
 
     def _next_call(self, observation: dict[str, Any]) -> Action | None:

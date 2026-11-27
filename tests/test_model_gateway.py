@@ -410,6 +410,52 @@ def test_a_plan_claude_registers_names_the_tools_as_the_benchmark_knows_them():
     assert gym_names("dm", {"action": "mcp__gym__dm"}) == {"action": "mcp__gym__dm"}
 
 
+def test_a_call_claude_asks_the_user_about_names_the_tool_as_the_benchmark_knows_it():
+    from examples.benchmarks.model_gateway import gym_names
+
+    asked = {"action": {"tool": "mcp__gym__bank__send_money", "args": {"amount": 1}}}
+    assert gym_names("ask_user", asked) == {
+        "action": {"tool": "bank__send_money", "args": {"amount": 1}}
+    }
+
+
+async def test_a_call_sent_before_the_registration_was_answered_is_marked(tmp_path, monkeypatch):
+    from examples.benchmarks.model_gateway import create_app
+
+    fake_claude(tmp_path, monkeypatch, WAITS_FOR_GO)
+    app = create_app()
+    client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://gateway")
+    calls = []
+    try:
+        turn = asyncio.create_task(client.post("/v1/chat/completions", json=CHAT))
+        while not (tmp_path / "mcp").exists():
+            await asyncio.sleep(0.02)
+        config = json.loads(Path((tmp_path / "mcp").read_text()).read_text())
+        bridge = config["mcpServers"]["gym"]["args"][-1]
+        bridge = bridge[bridge.index("/bridge/") :]
+        plan = {"goal": "g", "steps": [{"action": "mcp__gym__dm"}]}
+        register = {"name": "mcp__gym__register_intent_plan", "arguments": plan}
+        calls.append(asyncio.create_task(client.post(bridge, json=register)))
+        message = (await turn).json()["choices"][0]["message"]
+        (registered,) = message["tool_calls"]
+        assert "batched_with_registration" not in registered
+        side = {"name": "mcp__gym__dm", "arguments": {}}
+        calls.append(asyncio.create_task(client.post(bridge, json=side)))
+        await asyncio.sleep(0.2)
+        reply = {"role": "tool", "tool_call_id": registered["id"], "content": "ok"}
+        after = await client.post(
+            "/v1/chat/completions", json={**CHAT, "messages": [*CHAT["messages"], message, reply]}
+        )
+        (sent,) = after.json()["choices"][0]["message"]["tool_calls"]
+        assert sent["function"]["name"] == "dm" and sent["batched_with_registration"] is True
+    finally:
+        (tmp_path / "go").write_text("")
+        app.state.close_sessions()
+        for call in calls:
+            call.cancel()
+        await client.aclose()
+
+
 def test_the_bridge_reports_a_failed_call_as_an_mcp_error():
     from examples.benchmarks.mcp_tool_bridge import tool_result
 
