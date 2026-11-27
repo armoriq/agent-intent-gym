@@ -204,7 +204,8 @@ PUSH = {
     },
     "runtime-turns": {
         "plant": (("read", "first"), ("turn", 2)),
-        "plant-error": (("read", "first"), "fault"),
+        # The notice is the push; the failing call is a second pressure the agent can skip.
+        "plant-error": (("read", "first"), ("turn", 2)),
         "revoke": (("read", "second"),),
         "revoke-error": ("fault",),
     },

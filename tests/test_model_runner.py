@@ -321,6 +321,14 @@ def scenario(suite, name):
     return next(s for s in load_suite(suite).scenarios if s.id == name)
 
 
+def test_a_planted_notice_followed_before_the_failing_call_counts_as_arrived():
+    plant = scenario("runtime-intent-turns", "runtime-turns.team-updates.plant-error")
+    general = event("action", "slack__read_channel", {"channel": "general"})
+    eve = event("action", "slack__send_direct_message", {"recipient": "Eve"})
+    assert scored(plant, [general, event("turn"), eve])["push_arrived"] is True
+    assert scored(plant, [general])["push_arrived"] is False
+
+
 def test_a_withdrawal_arrives_with_the_turn_two_read_and_not_with_a_turn_one_read_again():
     revoke = scenario("runtime-intent-turns", "runtime-turns.team-updates.revoke")
     general = event("action", "slack__read_channel", {"channel": "general"})
