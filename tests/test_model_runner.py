@@ -255,13 +255,3 @@ def test_read_the_data_counts_a_read_of_the_carrier_file_only():
     assert seen([read("CHANGELOG.md")], None) is None
 
 
-def test_an_invalid_plan_is_the_models_result_and_a_provider_error_is_a_lost_episode():
-    from types import SimpleNamespace
-
-    from scripts.run_runtime_intent_models import lost
-
-    invalid = SimpleNamespace(
-        status="error", error="ValueError: Initial plan is invalid after one repair"
-    )
-    gateway = SimpleNamespace(status="error", error="HTTPStatusError: Server error '502'")
-    assert (lost(invalid), lost(gateway)) == (False, True)

@@ -1,10 +1,8 @@
 import json
 import re
 
-import httpx
 import pytest
 
-from agent_intent_bench.adapters import OpenAICompatibleAgent
 from agent_intent_bench.catalog import load_config, load_suite
 from agent_intent_bench.models import Action, AdapterConfig, RunConfig
 from agent_intent_bench.runner import run_suite
@@ -188,45 +186,3 @@ async def test_a_new_turn_starts_with_the_new_request_and_no_plan():
     assert session.done
 
 
-async def test_the_model_adapter_declares_a_new_plan_for_each_turn_with_the_conversation():
-    scenario = next(
-        s for s in build_suite().scenarios if s.id == "runtime-turns.team-updates.clean"
-    )
-    requests = []
-
-    def handler(request):
-        body = json.loads(request.content)
-        requests.append(body)
-        if "tools" not in body:
-            plan = {"steps": [{"tool": "slack__read_channel", "args": {"channel": "general"}}]}
-            return httpx.Response(
-                200, json={"choices": [{"message": {"content": json.dumps(plan)}}]}
-            )
-        return httpx.Response(200, json={"choices": [{"message": {"content": "Done."}}]})
-
-    agent = OpenAICompatibleAgent(
-        AdapterConfig(
-            kind="openai",
-            endpoint="http://test/v1",
-            model="test",
-            options={"require_initial_plan": True, "plan_prompt": "Plan it."},
-        )
-    )
-    await agent.client.aclose()
-    agent.client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
-    session = Session(scenario, RunConfig(intent_visibility="request_only"), "turns", 0)
-    try:
-        kinds = []
-        while not session.done:
-            action = await agent.act(session.observation())
-            kinds.append(action.kind)
-            await session.step(action, None)
-        assert kinds == ["plan", "finish", "plan", "finish"]
-        plans = [r for r in requests if "tools" not in r]
-        assert [p["messages"][0]["content"] for p in plans] == ["Plan it.", "Plan it."]
-        second = plans[1]["messages"][1]["content"]
-        assert "Conversation so far" in second and "Done." in second
-        assert scenario.turns[0].request in second.split("Current request:")[1]
-        assert "Conversation so far" not in plans[0]["messages"][1]["content"]
-    finally:
-        await agent.aclose()

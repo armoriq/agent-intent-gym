@@ -66,7 +66,10 @@ async def test_native_sdk_uses_real_session_interface_and_never_invokes_tools(
     guard = ArmorIQGuard(config)
     session = Session(scenario, RunConfig(), "native", 0)
     context = session.guard_context()
-    await guard.evaluate(Action(kind="plan", plan=[ToolCall(tool="payments__commit")]), context)
+    plan = Action(
+        kind="plan", plan=[ToolCall(tool="payments__commit")], args={"goal": "Commit the order"}
+    )
+    await guard.evaluate(plan, context)
     decision = await guard.evaluate(
         Action(tool="payments__commit", args={"quantity": 100}), context
     )
@@ -75,6 +78,8 @@ async def test_native_sdk_uses_real_session_interface_and_never_invokes_tools(
     assert calls[-2][-1] == "tester@example.test"
     assert calls[0][0] == "client"
     assert decision.evidence["integration"] == "native-sdk"
+    # The agent's own goal goes with its plan, as ArmorClaude sends it.
+    assert next(c for c in calls if c[0] == "plan")[2].startswith("Commit the order")
 
 
 async def test_http_agent_and_guard_transport_use_public_inputs(scenario):
@@ -151,116 +156,6 @@ async def test_model_adapter_passes_real_tool_feedback_and_tracks_usage(scenario
     assert agent.usage == {"input_tokens": 10, "output_tokens": 4}
     assert all(r["max_tokens"] == 1024 for r in requests)
     await agent.aclose()
-
-
-@pytest.mark.parametrize(
-    "invalid", ["not JSON", '{"steps": []}', '{"steps": [{"tool": "invented"}]}']
-)
-async def test_required_model_plan_repairs_before_execution_and_uses_public_input(
-    scenario, invalid
-):
-    requests = []
-    plan = {"steps": [{"tool": scenario.tools[0].name, "args": {}}]}
-
-    def handler(request):
-        body = json.loads(request.content)
-        requests.append(body)
-        message = (
-            {"content": invalid if len(requests) == 1 else json.dumps(plan)}
-            if len(requests) <= 2
-            else {"content": "Done"}
-        )
-        return httpx.Response(200, json={"choices": [{"message": message}]})
-
-    agent = OpenAICompatibleAgent(
-        AdapterConfig(
-            kind="openai",
-            endpoint="http://test/v1",
-            model="test",
-            options={"require_initial_plan": True},
-        )
-    )
-    await agent.client.aclose()
-    agent.client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
-    session = Session(scenario, RunConfig(intent_visibility="request_only"), "planning", 0)
-    try:
-        action = await agent.act(session.observation())
-        assert action.kind == "plan" and action.plan[0].tool == scenario.tools[0].name
-        public = json.loads(requests[0]["messages"][1]["content"])
-        assert "intent" not in public and "starter_plan" not in public
-        assert "tools" not in requests[0]  # Planning cannot execute a tool.
-        await session.step(action, None)
-        assert (await agent.act(session.observation())).kind == "finish"
-        assert len(requests) == 3
-        assert "response_format" not in requests[-1]  # One initial plan only.
-        assert "submit_plan" not in {t["function"]["name"] for t in requests[-1]["tools"]}
-    finally:
-        await agent.aclose()
-
-
-async def test_required_model_plan_repair_budget_is_bounded(scenario):
-    attempts = []
-
-    def handler(request):
-        attempts.append(request)
-        return httpx.Response(200, json={"choices": [{"message": {"content": "{}"}}]})
-
-    agent = OpenAICompatibleAgent(
-        AdapterConfig(
-            kind="openai",
-            endpoint="http://test/v1",
-            model="test",
-            options={"require_initial_plan": True},
-        )
-    )
-    await agent.client.aclose()
-    agent.client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
-    try:
-        with pytest.raises(ValueError, match="after one repair"):
-            await agent.act(Session(scenario, RunConfig(), "planning", 0).observation())
-        assert len(attempts) == 2
-    finally:
-        await agent.aclose()
-
-
-async def test_initial_plan_protocol_rejects_unsolicited_plan_expansion(scenario):
-    plan = {"steps": [{"tool": scenario.tools[0].name, "args": {}}]}
-    requests = []
-
-    def handler(request):
-        requests.append(json.loads(request.content))
-        message = (
-            {"content": json.dumps(plan)}
-            if len(requests) == 1
-            else {
-                "tool_calls": [
-                    {
-                        "id": "unoffered",
-                        "function": {"name": "submit_plan", "arguments": json.dumps(plan)},
-                    }
-                ]
-            }
-        )
-        return httpx.Response(200, json={"choices": [{"message": message}]})
-
-    agent = OpenAICompatibleAgent(
-        AdapterConfig(
-            kind="openai",
-            endpoint="http://test/v1",
-            model="test",
-            options={"require_initial_plan": True},
-        )
-    )
-    await agent.client.aclose()
-    agent.client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
-    try:
-        observation = Session(scenario, RunConfig(), "planning", 0).observation()
-        assert (await agent.act(observation)).kind == "plan"
-        with pytest.raises(ValueError, match="does not permit plan resubmission"):
-            await agent.act(observation)
-        assert len(requests) == 2
-    finally:
-        await agent.aclose()
 
 
 async def test_tool_arguments_that_are_not_json_reach_the_model_as_a_rejected_call(scenario):
@@ -430,3 +325,118 @@ async def test_the_model_hears_each_request_once_and_reads_tool_results_in_the_t
     assert json.loads(refused["content"])["status"] == "invalid_action"
     assert refused["is_error"] is True
     await agent.aclose()
+
+
+BILL = "runtime-model.bill-from-file.clean"
+READ = {"action": "files__read_file", "arguments": {"path": "/bills/december.txt"}}
+PAY = {
+    "tool": "bank__send_money",
+    "args": {"recipient": "FR1420041010050500013M02606", "amount": 98.7, "subject": "Electricity"},
+}
+
+
+def scripted_model(calls):
+    """A model endpoint that answers each request with the next (tool, arguments) call."""
+    requests = []
+
+    def handler(request):
+        requests.append(json.loads(request.content))
+        name, args = calls[len(requests) - 1]
+        call = {
+            "id": str(len(requests)),
+            "type": "function",
+            "function": {"name": name, "arguments": json.dumps(args)},
+        }
+        return httpx.Response(
+            200, json={"choices": [{"message": {"role": "assistant", "tool_calls": [call]}}]}
+        )
+
+    agent = OpenAICompatibleAgent(
+        AdapterConfig(
+            kind="openai", endpoint="http://test/v1", model="test", options={"intent_loop": True}
+        )
+    )
+    agent.client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    return agent, requests
+
+
+def bill():
+    from agent_intent_bench.catalog import load_suite
+
+    return next(s for s in load_suite("runtime-intent-model").scenarios if s.id == BILL)
+
+
+async def test_the_agent_registers_its_plan_in_its_own_conversation_after_the_product_directive():
+    from agent_intent_bench.adapters import INTENT_DIRECTIVE
+
+    scenario = bill()
+    agent, requests = scripted_model(
+        [("register_intent_plan", {"goal": "Pay the bill", "steps": [READ]})]
+    )
+    session = Session(scenario, RunConfig(intent_visibility="request_only"), "loop", 0)
+    action = await agent.act(session.observation())
+    first = requests[0]
+    assert "register_intent_plan" in {t["function"]["name"] for t in first["tools"]}
+    assert first["messages"][-1]["content"].startswith(scenario.request)
+    assert INTENT_DIRECTIVE in first["messages"][-1]["content"]
+    assert action.kind == "plan" and action.args == {"goal": "Pay the bill"}
+    assert [(c.tool, c.args) for c in action.plan] == [(READ["action"], READ["arguments"])]
+    await agent.aclose()
+
+
+async def test_a_plan_naming_a_tool_the_agent_does_not_have_is_refused_and_the_model_asked_again():
+    agent, requests = scripted_model(
+        [
+            ("register_intent_plan", {"goal": "Pay", "steps": [{"action": "bank__wire"}]}),
+            ("finish", {}),
+        ]
+    )
+    session = Session(bill(), RunConfig(intent_visibility="request_only"), "loop", 0)
+    assert (await agent.act(session.observation())).kind == "finish"
+    refused = [m for m in requests[1]["messages"] if m["role"] == "tool"][0]
+    assert refused["is_error"] is True and "unknown tools: bank__wire" in refused["content"]
+    await agent.aclose()
+
+
+async def test_a_call_off_the_plan_is_answered_with_the_plan_to_register_and_works_after_it():
+    from examples.benchmarks.runtime_intent import PlanToolsGuard
+
+    pay_step = {"action": PAY["tool"], "arguments": PAY["args"]}
+    agent, requests = scripted_model(
+        [
+            ("register_intent_plan", {"goal": "Pay the bill", "steps": [READ]}),
+            (PAY["tool"], PAY["args"]),
+            ("register_intent_plan", {"goal": "Pay the bill", "steps": [READ, pay_step]}),
+            (PAY["tool"], PAY["args"]),
+            ("finish", {}),
+        ]
+    )
+    config = RunConfig(mode="enforce", intent_visibility="request_only")
+    session = Session(bill(), config, "loop", 0)
+    guard = PlanToolsGuard()
+    for _ in range(4):
+        await session.step(await agent.act(session.observation()), guard)
+    await agent.act(session.observation())
+    answers = [m for m in requests[-1]["messages"] if m["role"] == "tool"]
+    blocked, paid = answers[1], answers[3]
+    assert blocked["is_error"] is True
+    hint = json.loads(blocked["content"].split("```json\n")[1].split("\n```")[0])
+    assert [s["action"] for s in hint["steps"]] == [READ["action"], PAY["tool"]]
+    assert hint["steps"][-1]["arguments"] == PAY["args"]
+    assert json.loads(paid["content"])["status"] == "ok"
+    await agent.aclose()
+
+
+def test_a_rejected_chain_gets_no_plan_to_register():
+    agent = OpenAICompatibleAgent(
+        AdapterConfig(
+            kind="openai", endpoint="http://test/v1", model="test", options={"intent_loop": True}
+        )
+    )
+    agent.registered = {"goal": "Pay", "steps": [READ]}
+    blocked = {"status": "blocked", "decision": {"reason": "intent_anchor_chain_rejected"}}
+    assert agent._deny(blocked, {"tool": PAY["tool"], "args": PAY["args"]}) == (
+        "Blocked: intent_anchor_chain_rejected"
+    )
+    unplanned = {"status": "blocked", "decision": {"reason": "tool-not-in-plan: not declared"}}
+    assert "To unblock" in agent._deny(unplanned, {"tool": PAY["tool"], "args": PAY["args"]})

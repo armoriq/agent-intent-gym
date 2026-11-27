@@ -11,7 +11,7 @@ agent:
     send_seed: true
     max_tokens: 1024
     request_timeout: 180
-    require_initial_plan: true
+    intent_loop: true
 guard:
   kind: armoriq
   api_key_env: ARMORIQ_API_KEY

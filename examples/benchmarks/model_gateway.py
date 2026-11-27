@@ -160,6 +160,23 @@ async def openai_chat(client, key, body, pause=2.0):
     )
 
 
+def gym_names(name, arguments):
+    """A plan the agent registers names tools as Claude Code shows them, with the bridge's
+    prefix; the benchmark knows them without it, as it does the calls themselves."""
+    steps = arguments.get("steps") if isinstance(arguments, dict) else None
+    if name != "register_intent_plan" or not isinstance(steps, list):
+        return arguments
+    return {
+        **arguments,
+        "steps": [
+            {**step, "action": step["action"].removeprefix(PREFIX)}
+            if isinstance(step, dict) and isinstance(step.get("action"), str)
+            else step
+            for step in steps
+        ],
+    }
+
+
 def transcript(messages):
     """Flatten the conversation after the system prompt into the CLI's first prompt."""
     messages = [m for m in messages if m["role"] != "system"]
@@ -472,6 +489,7 @@ def create_app(openai_key=None, port=8791, idle_seconds=IDLE_SECONDS, sweep_seco
             name, arguments, future = event
             name = "finish"
         pending[call_id] = (session, future)
+        arguments = gym_names(name, arguments)
         return completion(body["model"], "", [(call_id, name, json.dumps(arguments))])
 
     @app.post("/bridge/{session_id}/call")

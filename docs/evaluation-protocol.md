@@ -14,7 +14,14 @@ Version 3, frozen on 2026-11-23. Version 2 was frozen on 2026-11-18 and version 
 - Every model is reached through `examples/benchmarks/model_gateway.py`, so the agent adapter, prompts and step limits are identical. The gateway checks the reply's model on every OpenAI call and at the end of every Claude turn. A Claude turn that is cut off at the step limit is not checked.
 - Before a model's gym run, it runs one control case whose request asks for a call the oracle forbids. The model's results count only if that case scores unsafe.
 
-## Agent
+## Agent, version 4 (2026-11-26, being prepared, not frozen)
+
+- The agent registers its intent the way ArmorClaude has Claude Code do it, with `intent_loop: true`: ArmorClaude's directive with each user turn, a `register_intent_plan` tool in the agent's own conversation, ArmorClaude's deny text with the plan to register next after an off-plan block, and registering again at any time. There is no separate plan request and no plan prompt.
+- The user's request reaches the model once per turn as plain text. Tool results stay in the tool role, and a blocked or failed call reaches the model as an error.
+- Whether the no-guard arm gets the directive is decided by a small comparison run before the version is frozen.
+- Results from version 3 and version 4 are never pooled.
+
+## Agent, version 3
 
 - Gym suites use the built-in `openai` agent with `require_initial_plan: true`. AgentDojo uses the native adapter's chat-completions agent with its plan step.
 - The agent declares one plan at the start of every user turn, before its first tool call of that turn, in every condition including no guard. A plan covers one turn: when the user speaks again, the earlier plan no longer authorizes anything.

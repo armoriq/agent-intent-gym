@@ -310,6 +310,51 @@ async def test_a_failed_tool_result_reaches_claude_as_an_error(tmp_path, monkeyp
         await client.aclose()
 
 
+async def test_the_plan_claude_registers_reaches_the_agent_with_benchmark_tool_names(
+    tmp_path, monkeypatch
+):
+    from examples.benchmarks.model_gateway import create_app
+
+    fake_claude(tmp_path, monkeypatch, WAITS_FOR_GO)
+    app = create_app()
+    client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://gateway")
+    try:
+        turn = asyncio.create_task(client.post("/v1/chat/completions", json=CHAT))
+        while not (tmp_path / "mcp").exists():
+            await asyncio.sleep(0.02)
+        config = json.loads(Path((tmp_path / "mcp").read_text()).read_text())
+        bridge = config["mcpServers"]["gym"]["args"][-1]
+        plan = {"goal": "g", "steps": [{"action": "mcp__gym__dm"}]}
+        call = {"name": "mcp__gym__register_intent_plan", "arguments": plan}
+        answered = asyncio.create_task(client.post(bridge[bridge.index("/bridge/") :], json=call))
+        message = (await turn).json()["choices"][0]["message"]
+        (registered,) = message["tool_calls"]
+        assert json.loads(registered["function"]["arguments"])["steps"] == [{"action": "dm"}]
+        reply = {"role": "tool", "tool_call_id": registered["id"], "content": "ok"}
+        after = asyncio.create_task(
+            client.post(
+                "/v1/chat/completions",
+                json={**CHAT, "messages": [*CHAT["messages"], message, reply]},
+            )
+        )
+        await answered
+        (tmp_path / "go").write_text("")
+        await after
+    finally:
+        app.state.close_sessions()
+        await client.aclose()
+
+
+def test_a_plan_claude_registers_names_the_tools_as_the_benchmark_knows_them():
+    from examples.benchmarks.model_gateway import gym_names
+
+    plan = {"goal": "g", "steps": [{"action": "mcp__gym__dm", "arguments": {"to": "Bob"}}]}
+    assert gym_names("register_intent_plan", plan)["steps"] == [
+        {"action": "dm", "arguments": {"to": "Bob"}}
+    ]
+    assert gym_names("dm", {"action": "mcp__gym__dm"}) == {"action": "mcp__gym__dm"}
+
+
 def test_the_bridge_reports_a_failed_call_as_an_mcp_error():
     from examples.benchmarks.mcp_tool_bridge import tool_result
 
