@@ -291,8 +291,10 @@ class OpenAICompatibleAgent:
         self.told_turn = -1
         self.seen_messages = 0
         self.request = ""
-        # The last plan this agent registered in the current turn, in the product's shape.
+        # The last plan the guard accepted in the current turn, in the product's shape, and
+        # the one this agent sent and is waiting on.
         self.registered: dict[str, Any] | None = None
+        self.proposed: dict[str, Any] | None = None
 
     async def act(self, observation: dict[str, Any]) -> Action:
         import json
@@ -304,6 +306,8 @@ class OpenAICompatibleAgent:
             result = observation.get("last_result")
             answer = self.messages[-1]
             answer["content"] = json.dumps(result, ensure_ascii=False)
+            if isinstance(result, dict) and result.get("status") == "plan_registered":
+                self.registered = self.proposed
             if isinstance(result, dict) and result.get("status") in FAILED:
                 answer["is_error"] = True
                 if result.get("status") == "blocked" and self.config.options.get("intent_loop"):
@@ -322,7 +326,7 @@ class OpenAICompatibleAgent:
                 )
             # The user speaks once per turn, in plain text. Tool results stay in the tool role.
             self.request = observation.get("request") or ""
-            self.registered = None
+            self.registered = self.proposed = None
             text = user_text(observation)
             if self.config.options.get("intent_loop"):
                 text += "\n\n<system-reminder>\n" + INTENT_DIRECTIVE + "\n</system-reminder>"
@@ -458,7 +462,7 @@ class OpenAICompatibleAgent:
                 answer["is_error"] = True
                 return None
             goal = str(args.get("goal") or "")
-            self.registered = {"goal": goal, "steps": steps}
+            self.proposed = {"goal": goal, "steps": steps}
             plan = [
                 {
                     "tool": step["action"],
@@ -593,6 +597,10 @@ PLAN_CHECK_BLOCKS = (
 )
 
 
+# 4xx answers that say the request never reached a plan decision.
+REACHED_NOT = {401, 403, 408, 429}
+
+
 class ArmorIQGuard:
     """Native check-only integration: SDK sessions check; the gym executes synthetic tools.
 
@@ -607,11 +615,13 @@ class ArmorIQGuard:
         require_armoriq_credentials(config)
         try:
             from armoriq_sdk import ArmorIQClient, SessionOptions
+            from armoriq_sdk.exceptions import IntentReanchorException
         except ImportError as error:
             raise ValueError(
                 "Install the SDK with uv sync --extra armoriq or uv pip install -e ../armoriq-sdk-customer"
             ) from error
         self.config = config
+        self.reanchor_error = IntentReanchorException
         tool_name_mode = config.options.get("tool_name_mode", "mcp")
         if tool_name_mode not in {"mcp", "agent"}:
             raise ValueError("ArmorIQ tool_name_mode must be mcp or agent")
@@ -721,12 +731,28 @@ class ArmorIQGuard:
             calls = [{"name": call.tool, "args": call.args} for call in action.plan]
             # The agent's own goal when it gave one, as ArmorClaude sends it with the plan.
             goal = action.args.get("goal") or context["intent"]["objective"]
-            await asyncio.to_thread(
-                self.session.start_plan,
-                calls,
-                goal=goal
-                + ("\nUser request: " + context["request"] if context.get("request") else ""),
-            )
+            try:
+                await asyncio.to_thread(
+                    self.session.start_plan,
+                    calls,
+                    goal=goal
+                    + ("\nUser request: " + context["request"] if context.get("request") else ""),
+                )
+            except self.reanchor_error as error:
+                # The backend answered and refused the changed plan: the product decided, so the
+                # registration is blocked and scored. No answer, a failed sign-in or a server
+                # error stays a lost episode.
+                if not (400 <= (error.status_code or 0) < 500) or error.status_code in REACHED_NOT:
+                    raise
+                return Decision(
+                    action="block",
+                    reason=error.reason or str(error),
+                    evidence={
+                        "integration": "native-sdk",
+                        "sdk_mode": self.sdk_mode,
+                        "refused_registration": error.status_code,
+                    },
+                )
             self.plan_captured = True
             return Decision(
                 action="allow",

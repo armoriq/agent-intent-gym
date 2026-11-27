@@ -2,12 +2,20 @@ import json
 import sys
 import types
 
+import armoriq_sdk.exceptions as sdk_exceptions
 import httpx
 import pytest
+from armoriq_sdk.exceptions import IntentReanchorException
 
 from agent_intent_bench.adapters import ArmorIQGuard, HTTPAgent, HTTPGuard, OpenAICompatibleAgent
-from agent_intent_bench.models import Action, AdapterConfig, RunConfig, ToolCall
+from agent_intent_bench.models import Action, AdapterConfig, Decision, RunConfig, ToolCall
 from agent_intent_bench.session import Session
+
+
+@pytest.fixture(autouse=True)
+def sdk_exceptions_beside_a_fake_sdk(monkeypatch):
+    # Tests swap the SDK module for a fake; the guard still imports its real exceptions.
+    monkeypatch.setitem(sys.modules, "armoriq_sdk.exceptions", sdk_exceptions)
 
 
 def test_native_sdk_requires_credentials_without_reading_ambient_login(monkeypatch, tmp_path):
@@ -199,12 +207,13 @@ def test_openai_agent_takes_its_system_prompt_from_options():
     assert OpenAICompatibleAgent(config).messages[0]["content"] == "Only this."
 
 
-def plan_check_guard(monkeypatch, decide, **options):
+def plan_check_guard(monkeypatch, decide, start_plan=None, **options):
     """An ArmorIQ guard in plan-check-only mode over a fake SDK session."""
 
     class FakeSession:
         def start_plan(self, tool_calls, goal=None):
-            pass
+            if start_plan:
+                start_plan(tool_calls)
 
         def check(self, name, args, user_email=None):
             return types.SimpleNamespace(**decide(name))
@@ -269,6 +278,37 @@ async def test_plan_check_only_passes_the_plan_check_decisions_through(monkeypat
     await guard.evaluate(Action(kind="plan", plan=[ToolCall(tool="payments__commit")]), context)
     seen = [(await guard.evaluate(Action(tool=tool, args={}), context)).action for tool in decide]
     assert seen == ["allow", "block", "block"]
+
+
+@pytest.mark.parametrize(
+    "status, scored", [(409, True), (404, True), (502, False), (401, False), (None, False)]
+)
+async def test_a_plan_the_backend_refuses_is_a_scored_block_and_no_answer_loses_the_episode(
+    monkeypatch, scenario, status, scored
+):
+    def refuse_growth(calls):
+        if len(calls) > 1:
+            raise IntentReanchorException(
+                "refused", status_code=status, reason="reanchor_chain_limit"
+            )
+
+    guard = plan_check_guard(
+        monkeypatch, {"payments__commit": ALLOWED}.get, start_plan=refuse_growth
+    )
+    session = Session(scenario, RunConfig(mode="enforce"), "native", 0)
+    await session.step(Action(kind="plan", plan=[ToolCall(tool="payments__commit")]), guard)
+    grown = Action(
+        kind="plan", plan=[ToolCall(tool="payments__commit"), ToolCall(tool="payments__refund")]
+    )
+    if not scored:
+        with pytest.raises(IntentReanchorException):
+            await session.step(grown, guard)
+        return
+    result = await session.step(grown, guard)
+    assert (result["status"], result["decision"]["reason"]) == ("blocked", "reanchor_chain_limit")
+    # The plan the backend already holds still stands.
+    still = await guard.evaluate(Action(tool="payments__commit", args={}), session.guard_context())
+    assert still.action == "allow"
 
 
 def test_plan_check_only_refuses_the_local_checking_mode(monkeypatch):
@@ -424,6 +464,37 @@ async def test_a_call_off_the_plan_is_answered_with_the_plan_to_register_and_wor
     assert [s["action"] for s in hint["steps"]] == [READ["action"], PAY["tool"]]
     assert hint["steps"][-1]["arguments"] == PAY["args"]
     assert json.loads(paid["content"])["status"] == "ok"
+    await agent.aclose()
+
+
+async def test_a_refused_plan_is_not_the_base_of_the_next_plan_to_register():
+    from examples.benchmarks.runtime_intent import PlanToolsGuard
+
+    class RefuseChange(PlanToolsGuard):
+        async def evaluate(self, action, context):
+            if action.kind == "plan" and context["plan"]:
+                return Decision(action="block", reason="reanchor_chain_limit")
+            return await super().evaluate(action, context)
+
+    pay_step = {"action": PAY["tool"], "arguments": PAY["args"]}
+    agent, requests = scripted_model(
+        [
+            ("register_intent_plan", {"goal": "Pay the bill", "steps": [READ]}),
+            ("register_intent_plan", {"goal": "Pay the bill", "steps": [READ, pay_step, pay_step]}),
+            (PAY["tool"], PAY["args"]),
+            ("finish", {}),
+        ]
+    )
+    session = Session(
+        bill(), RunConfig(mode="enforce", intent_visibility="request_only"), "loop", 0
+    )
+    for _ in range(3):
+        await session.step(await agent.act(session.observation()), RefuseChange())
+    await agent.act(session.observation())
+    refused, blocked = [m for m in requests[-1]["messages"] if m["role"] == "tool"][1:3]
+    assert refused["content"] == "Blocked: reanchor_chain_limit"
+    hint = json.loads(blocked["content"].split("```json\n")[1].split("\n```")[0])
+    assert [s["action"] for s in hint["steps"]] == [READ["action"], PAY["tool"]]
     await agent.aclose()
 
 
